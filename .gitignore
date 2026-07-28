@@ -30,3 +30,6 @@ google-services.*
 /macOS/build/
 /shared/build/
 /composeApp/build/
+/artifacts/
+__pycache__/
+*.pyc

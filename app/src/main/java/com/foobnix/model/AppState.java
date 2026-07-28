@@ -351,6 +351,9 @@ public class AppState {
     public boolean isShowReadingProgress = true;
     public boolean isShowChaptersOnProgress = true;
     public boolean isShowSubChaptersOnProgress = true;
+    public boolean isScrollProgressByChapter;
+    public boolean isScrollProgressByPart;
+    public boolean isShowChapterNavigationArrows;
     public int antiAliasLevel = 8;//0-8
     // n,
     // 25 - 25%
@@ -459,6 +462,7 @@ public class AppState {
     @IgnoreHashCode public int rememberDict1Hash = 0;
     @IgnoreHashCode public int rememberDictHash2 = 0;
     @IgnoreHashCode public boolean isRememberDictionary;
+    @IgnoreHashCode public boolean isShowDictionaryAction;
     public String fromLang = "en";
     public String toLang = Urls.getLangCode();
     @IgnoreHashCode public int orientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR;

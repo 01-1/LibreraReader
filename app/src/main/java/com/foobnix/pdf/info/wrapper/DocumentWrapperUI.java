@@ -46,6 +46,8 @@ import com.foobnix.pdf.info.DictsHelper;
 import com.foobnix.pdf.info.ExtUtils;
 import com.foobnix.pdf.info.OutlineHelper;
 import com.foobnix.pdf.info.OutlineHelper.Info;
+import com.foobnix.pdf.info.OutlineProgressHelper;
+import com.foobnix.pdf.info.OutlineProgressHelper.PageRange;
 import com.foobnix.pdf.info.R;
 import com.foobnix.pdf.info.TintUtil;
 import com.foobnix.pdf.info.UiSystemUtils;
@@ -276,9 +278,10 @@ public class DocumentWrapperUI {
             }, null);
         }
     };
-    ImageView anchorX, anchorY;
+    ImageView anchorX, anchorY, chapterPrevious, chapterNext;
     DrawView drawView;
     ProgressDraw progressDraw;
+    PageRange interactiveProgressRange = PageRange.wholeBook(1);
     public View.OnClickListener onHideShowToolBar = new View.OnClickListener() {
 
         @Override
@@ -336,7 +339,8 @@ public class DocumentWrapperUI {
         @Override
         public void onProgressChanged(final SeekBar seekBar, final int progress, final boolean fromUser) {
 
-            dc.onGoToPage(progress + 1);
+            int page = seekBar == null ? progress + 1 : interactiveProgressRange.toAbsolutePage(progress);
+            dc.onGoToPage(page);
 
             Apps.accessibilityText(a, a.getString(R.string.m_current_page) + " " + dc.getCurentPageFirst1());
             //updateUI();
@@ -733,15 +737,11 @@ public class DocumentWrapperUI {
 
     public void updateUI() {
         //hideShowAnnotationLine();
-        final int max = dc.getPageCount();
         final int current = dc.getCurentPage();
 
         updateSpeedLabel();
 
-        seekBar.setOnSeekBarChangeListener(null);
-        seekBar.setMax(max - 1);
-        seekBar.setProgress(current - 1);
-        seekBar.setOnSeekBarChangeListener(onSeek);
+        updateInteractiveProgressBar();
 
         speedSeekBar.setOnSeekBarChangeListener(null);
         speedSeekBar.setMax(AppState.MAX_SPEED);
@@ -848,6 +848,51 @@ public class DocumentWrapperUI {
         line1.setLayoutParams(line1.getLayoutParams());
         line2.setLayoutParams(line2.getLayoutParams());
 
+    }
+
+    private void updateInteractiveProgressBar() {
+        interactiveProgressRange = OutlineProgressHelper.getProgressRange(dc);
+        seekBar.setOnSeekBarChangeListener(null);
+        seekBar.setMax(interactiveProgressRange.getPageCount() - 1);
+        seekBar.setProgress(interactiveProgressRange.toRelativeProgress(dc.getCurentPageFirst1()));
+        seekBar.setOnSeekBarChangeListener(onSeek);
+        updateChapterNavigationArrows();
+    }
+
+    private void goToAdjacentChapter(boolean next) {
+        int page = next ?
+                   OutlineProgressHelper.findNextChapterPage(dc.getCurrentOutline(),
+                                                             dc.getCurentPageFirst1(),
+                                                             dc.getPageCount()) :
+                   OutlineProgressHelper.findPreviousChapterPage(dc.getCurrentOutline(),
+                                                                 dc.getCurentPageFirst1(),
+                                                                 dc.getPageCount());
+        if (page > 0) {
+            dc.onGoToPage(page);
+        }
+    }
+
+    private void updateChapterNavigationArrows() {
+        boolean visible = AppState.get().isShowChapterNavigationArrows;
+        chapterPrevious.setVisibility(visible ? View.VISIBLE : View.GONE);
+        chapterNext.setVisibility(visible ? View.VISIBLE : View.GONE);
+        if (!visible) {
+            return;
+        }
+
+        int previousPage = OutlineProgressHelper.findPreviousChapterPage(dc.getCurrentOutline(),
+                                                                         dc.getCurentPageFirst1(),
+                                                                         dc.getPageCount());
+        int nextPage = OutlineProgressHelper.findNextChapterPage(dc.getCurrentOutline(),
+                                                                 dc.getCurentPageFirst1(),
+                                                                 dc.getPageCount());
+        setChapterArrowEnabled(chapterPrevious, previousPage > 0);
+        setChapterArrowEnabled(chapterNext, nextPage > 0);
+    }
+
+    private static void setChapterArrowEnabled(ImageView arrow, boolean enabled) {
+        arrow.setEnabled(enabled);
+        arrow.setAlpha(enabled ? 1.0f : 0.35f);
     }
 
     public void hideShowPrevNext() {
@@ -969,6 +1014,10 @@ public class DocumentWrapperUI {
 
         seekBar = (SeekBar) a.findViewById(R.id.seekBar1);
         seekBar.setAccessibilityDelegate(new View.AccessibilityDelegate());
+        chapterPrevious = a.findViewById(R.id.chapterPrevious);
+        chapterNext = a.findViewById(R.id.chapterNext);
+        chapterPrevious.setOnClickListener(v -> goToAdjacentChapter(false));
+        chapterNext.setOnClickListener(v -> goToAdjacentChapter(true));
         speedSeekBar = (SeekBar) a.findViewById(R.id.seekBarSpeed);
         seekSpeedLayot = a.findViewById(R.id.seekSpeedLayot);
         anchor = (FrameLayout) a.findViewById(R.id.anchor);
@@ -2083,6 +2132,7 @@ public class DocumentWrapperUI {
                     HypenPanelHelper.init(parentParent, dc);
 
                     showPagesHelper();
+                    updateInteractiveProgressBar();
 
                 }
             });

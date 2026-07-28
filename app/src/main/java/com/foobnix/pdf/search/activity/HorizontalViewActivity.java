@@ -65,6 +65,8 @@ import com.foobnix.pdf.info.ExtUtils;
 import com.foobnix.pdf.info.IMG;
 import com.foobnix.pdf.info.OutlineHelper;
 import com.foobnix.pdf.info.OutlineHelper.Info;
+import com.foobnix.pdf.info.OutlineProgressHelper;
+import com.foobnix.pdf.info.OutlineProgressHelper.PageRange;
 import com.foobnix.pdf.info.PasswordDialog;
 import com.foobnix.pdf.info.R;
 import com.foobnix.pdf.info.TintUtil;
@@ -132,7 +134,7 @@ public class HorizontalViewActivity extends AdsFragmentActivity {
     FrameLayout anchor;
     UnderlineImageView onCrop, onBC;
     ImageView moveCenter, lockModelImage, linkHistory, onModeChange, outline, onMove, textToSpeach, onPageFlip1,
-            anchorX, anchorY, pagesBookmark;
+            anchorX, anchorY, pagesBookmark, chapterPrevious, chapterNext;
     HorizontalModeController dc;
     Handler handler = new Handler(Looper.getMainLooper());
     Handler flippingHandler = new Handler(Looper.getMainLooper());
@@ -142,6 +144,7 @@ public class HorizontalViewActivity extends AdsFragmentActivity {
     volatile Boolean isInitPosistion = null;
     volatile int isInitOrientation;
     ProgressDraw progressDraw;
+    PageRange interactiveProgressRange = PageRange.wholeBook(1);
     LinearLayout pageshelper;
     String quickBookmark;
     ClickUtils clickUtils;
@@ -471,6 +474,10 @@ public class HorizontalViewActivity extends AdsFragmentActivity {
         linkHistory.setVisibility(View.GONE);
 
         seekBar = (SeekBar) findViewById(R.id.seekBar1);
+        chapterPrevious = findViewById(R.id.chapterPrevious);
+        chapterNext = findViewById(R.id.chapterNext);
+        chapterPrevious.setOnClickListener(v -> goToAdjacentChapter(false));
+        chapterNext.setOnClickListener(v -> goToAdjacentChapter(true));
 
         applyRTL();
 
@@ -1780,10 +1787,8 @@ public class HorizontalViewActivity extends AdsFragmentActivity {
         currentSeek.setContentDescription(dc.getString(R.string.m_current_page) + " " + info.textMax);
         maxSeek.setContentDescription(dc.getString(R.string.m_total_pages) + " " + info.textPage);
 
-        seekBar.setProgress(page);
-        if (dc != null) {
-            dc.currentPage = page;
-        }
+        dc.currentPage = page;
+        updateInteractiveProgressBar();
 
         pagesTime.setText(UiSystemUtils.getSystemTime(this));
         //pagesTime1.setText(UiSystemUtils.getSystemTime(this));
@@ -1818,6 +1823,51 @@ public class HorizontalViewActivity extends AdsFragmentActivity {
 
     }
 
+    private void updateInteractiveProgressBar() {
+        interactiveProgressRange = OutlineProgressHelper.getProgressRange(dc);
+        seekBar.setOnSeekBarChangeListener(null);
+        seekBar.setMax(interactiveProgressRange.getPageCount() - 1);
+        seekBar.setProgress(interactiveProgressRange.toRelativeProgress(dc.getCurentPageFirst1()));
+        seekBar.setOnSeekBarChangeListener(onSeek);
+        updateChapterNavigationArrows();
+    }
+
+    private void goToAdjacentChapter(boolean next) {
+        int page = next ?
+                   OutlineProgressHelper.findNextChapterPage(dc.getCurrentOutline(),
+                                                             dc.getCurentPageFirst1(),
+                                                             dc.getPageCount()) :
+                   OutlineProgressHelper.findPreviousChapterPage(dc.getCurrentOutline(),
+                                                                 dc.getCurentPageFirst1(),
+                                                                 dc.getPageCount());
+        if (page > 0) {
+            dc.onGoToPage(page);
+        }
+    }
+
+    private void updateChapterNavigationArrows() {
+        boolean visible = AppState.get().isShowChapterNavigationArrows;
+        chapterPrevious.setVisibility(visible ? View.VISIBLE : View.GONE);
+        chapterNext.setVisibility(visible ? View.VISIBLE : View.GONE);
+        if (!visible) {
+            return;
+        }
+
+        int previousPage = OutlineProgressHelper.findPreviousChapterPage(dc.getCurrentOutline(),
+                                                                         dc.getCurentPageFirst1(),
+                                                                         dc.getPageCount());
+        int nextPage = OutlineProgressHelper.findNextChapterPage(dc.getCurrentOutline(),
+                                                                 dc.getCurentPageFirst1(),
+                                                                 dc.getPageCount());
+        setChapterArrowEnabled(chapterPrevious, previousPage > 0);
+        setChapterArrowEnabled(chapterNext, nextPage > 0);
+    }
+
+    private static void setChapterArrowEnabled(ImageView arrow, boolean enabled) {
+        arrow.setEnabled(enabled);
+        arrow.setAlpha(enabled ? 1.0f : 0.35f);
+    }
+
     public void loadUI() {
         titleTxt.setText(dc.getTitle());
         pannelBookTitle.setText(dc.getTitle());
@@ -1826,8 +1876,7 @@ public class HorizontalViewActivity extends AdsFragmentActivity {
         viewPager.addOnPageChangeListener(onViewPagerChangeListener);
         viewPager.setCurrentItem(dc.getCurentPage(), false);
 
-        seekBar.setMax(dc.getPageCount() - 1);
-        seekBar.setProgress(dc.getCurentPage());
+        updateInteractiveProgressBar();
 
         bottomIndicators.setOnTouchListener(new HorizontallSeekTouchEventListener(onSeek, dc.getPageCount(), false));
         progressDraw.setOnTouchListener(new HorizontallSeekTouchEventListener(onSeek, dc.getPageCount(), false));
@@ -2503,7 +2552,8 @@ public class HorizontalViewActivity extends AdsFragmentActivity {
         @Override
         public void onProgressChanged(final SeekBar seekBar, final int progress, final boolean fromUser) {
             // updateUI(progress);
-            viewPager.setCurrentItem(progress, false);
+            int page = seekBar == null ? progress : interactiveProgressRange.toAbsolutePage(progress) - 1;
+            viewPager.setCurrentItem(page, false);
             flippingTimer = 0;
 
             if (AppState.get().isEditMode && !fromUser) {

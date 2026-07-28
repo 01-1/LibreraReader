@@ -69,6 +69,27 @@
             android:text="@string/display_sub_chapters_on_the_progress_line" />
 
         <CheckBox
+            android:id="@+id/isScrollProgressByChapter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dip"
+            android:text="@string/scroll_progress_within_chapter" />
+
+        <CheckBox
+            android:id="@+id/isScrollProgressByPart"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="@dimen/sub_checkbox"
+            android:text="@string/scroll_progress_within_part" />
+
+        <CheckBox
+            android:id="@+id/isShowChapterNavigationArrows"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dip"
+            android:text="@string/show_chapter_navigation_arrows" />
+
+        <CheckBox
             android:id="@+id/isShowTime"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

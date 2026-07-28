@@ -943,24 +943,39 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
-                android:orientation="horizontal"
+                android:orientation="vertical"
                 android:visibility="gone">
 
-                <CheckBox
-                    android:id="@+id/isRememberDictionary"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:maxLines="1"
-                    android:text="@string/open_in_the_dictionary" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
-                <TextView
-                    android:id="@+id/selectedDictionaly"
+                    <CheckBox
+                        android:id="@+id/isRememberDictionary"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:maxLines="1"
+                        android:text="@string/open_in_the_dictionary" />
+
+                    <TextView
+                        android:id="@+id/selectedDictionaly"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="10dip"
+                        android:padding="5dip"
+                        android:singleLine="true"
+                        android:text="GoogleTranslate" />
+                </LinearLayout>
+
+                <CheckBox
+                    android:id="@+id/isShowDictionaryAction"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginLeft="10dip"
-                    android:padding="5dip"
-                    android:singleLine="true"
-                    android:text="GoogleTranslate" />
+                    android:layout_marginLeft="@dimen/sub_checkbox"
+                    android:maxLines="1"
+                    android:text="@string/show_dictionary_action_on_selection" />
             </LinearLayout>
 
             <CheckBox

@@ -260,6 +260,32 @@
             android:layout_height="1dp"
             android:background="@color/lt_grey_alpha" />
 
+        <LinearLayout
+            android:id="@+id/onDictionary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@android:drawable/list_selector_background"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="@dimen/wh_button_small"
+                android:layout_height="@dimen/wh_button_small"
+                android:src="@drawable/glyphicons_580_translate"
+                android:tint="@color/tint_gray" />
+
+            <TextView
+                style="@style/textLink"
+                android:layout_width="match_parent"
+                android:layout_height="35dip"
+                android:gravity="center_vertical"
+                android:paddingLeft="10dip"
+                android:singleLine="true"
+                android:text="@string/open_in_the_dictionary"
+                android:textSize="15sp" />
+
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"

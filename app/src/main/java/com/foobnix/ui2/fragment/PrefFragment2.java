@@ -131,7 +131,7 @@ public class PrefFragment2 extends UIFragment {
     TextView singIn, syncInfo, syncInfo2, syncHeader;
     CheckBox isEnableSync;
     private TextView curBrightness, themeColor, profileLetter;
-    private CheckBox isRememberDictionary;
+    private CheckBox isRememberDictionary, isShowDictionaryAction;
     private TextView nextKeys;
     private TextView prevKeys;
     OnCheckedChangeListener reverseListener = new OnCheckedChangeListener() {
@@ -2076,17 +2076,23 @@ public class PrefFragment2 extends UIFragment {
 
         // dictionary
         isRememberDictionary = inflate.findViewById(R.id.isRememberDictionary);
+        isShowDictionaryAction = inflate.findViewById(R.id.isShowDictionaryAction);
         isRememberDictionary.setChecked(AppState.get().isRememberDictionary);
-        isRememberDictionary.setOnCheckedChangeListener(new
-
-                                                                OnCheckedChangeListener() {
-
-                                                                    @Override public void onCheckedChanged(
-                                                                            final CompoundButton buttonView,
-                                                                            final boolean isChecked) {
-                                                                        AppState.get().isRememberDictionary = isChecked;
-                                                                    }
-                                                                });
+        isShowDictionaryAction.setChecked(AppState.get().isShowDictionaryAction);
+        isRememberDictionary.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            AppState.get().isRememberDictionary = isChecked;
+            if (isChecked) {
+                AppState.get().isShowDictionaryAction = false;
+                isShowDictionaryAction.setChecked(false);
+            }
+        });
+        isShowDictionaryAction.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            AppState.get().isShowDictionaryAction = isChecked;
+            if (isChecked) {
+                AppState.get().isRememberDictionary = false;
+                isRememberDictionary.setChecked(false);
+            }
+        });
 
         selectedDictionaly = inflate.findViewById(R.id.selectedDictionaly);
         selectedDictionaly.setText(DialogTranslateFromTo.getSelectedDictionaryUnderline());
@@ -2829,6 +2835,7 @@ public class PrefFragment2 extends UIFragment {
         textDayColor.setBackgroundColor(AppState.get().colorDayBg);
 
         isRememberDictionary.setChecked(AppState.get().isRememberDictionary);
+        isShowDictionaryAction.setChecked(AppState.get().isShowDictionaryAction);
         selectedDictionaly.setText(DialogTranslateFromTo.getSelectedDictionaryUnderline());
 
     }

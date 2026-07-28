@@ -186,6 +186,17 @@
                 android:textSize="14sp"
                 android:textStyle="normal" />
 
+            <ImageView
+                android:id="@+id/chapterPrevious"
+                style="@style/buttonWhite"
+                android:layout_width="@dimen/wh_button_small"
+                android:layout_height="@dimen/wh_button_small"
+                android:layout_weight="0"
+                android:contentDescription="@string/previous_chapter"
+                android:padding="6dip"
+                android:src="@drawable/glyphicons_223_chevron_left"
+                android:visibility="gone" />
+
             <SeekBar
                 android:id="@+id/seekBar1"
                 android:layout_width="wrap_content"
@@ -198,6 +209,17 @@
                 android:paddingBottom="3dip"
                 android:progressTint="@android:color/white"
                 android:thumbTint="@android:color/white" />
+
+            <ImageView
+                android:id="@+id/chapterNext"
+                style="@style/buttonWhite"
+                android:layout_width="@dimen/wh_button_small"
+                android:layout_height="@dimen/wh_button_small"
+                android:layout_weight="0"
+                android:contentDescription="@string/next_chapter"
+                android:padding="6dip"
+                android:src="@drawable/glyphicons_224_chevron_right"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/maxSeek"

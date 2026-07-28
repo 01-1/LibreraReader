@@ -1792,6 +1792,17 @@ public class DragingDialogs {
 
                 editText.setText(selectedText);
 
+                View onDictionary = view.findViewById(R.id.onDictionary);
+                onDictionary.setVisibility(TxtUtils.visibleIf(AppState.get().isShowDictionaryAction));
+                onDictionary.setOnClickListener(v -> {
+                    String text = editText.getText().toString().trim();
+                    if (TxtUtils.isNotEmpty(text)) {
+                        controller.clearSelectedText();
+                        closeDialog();
+                        DictsHelper.runIntent(controller.getActivity(), anchor, text);
+                    }
+                });
+
                 view.findViewById(R.id.onTranslate).setOnClickListener(v -> {
                     anchor.removeAllViews();
                     final PopupMenu popupMenu = new PopupMenu(v.getContext(), view);
@@ -3318,6 +3329,10 @@ public class DragingDialogs {
                 final CheckBox isShowReadingProgress = inflate.findViewById(R.id.isShowReadingProgress);
                 final CheckBox isShowChaptersOnProgress = inflate.findViewById(R.id.isShowChaptersOnProgress);
                 final CheckBox isShowSubChaptersOnProgress = inflate.findViewById(R.id.isShowSubChaptersOnProgress);
+                final CheckBox isScrollProgressByChapter = inflate.findViewById(R.id.isScrollProgressByChapter);
+                final CheckBox isScrollProgressByPart = inflate.findViewById(R.id.isScrollProgressByPart);
+                final CheckBox isShowChapterNavigationArrows =
+                        inflate.findViewById(R.id.isShowChapterNavigationArrows);
 
                 isShowReadingProgress.setChecked(AppState.get().isShowReadingProgress);
                 isShowReadingProgress.setOnCheckedChangeListener(new OnCheckedChangeListener() {
@@ -3370,6 +3385,39 @@ public class DragingDialogs {
                             isShowChaptersOnProgress.setChecked(true);
                             isShowReadingProgress.setChecked(true);
                         }
+                    }
+                });
+
+                isScrollProgressByChapter.setChecked(AppState.get().isScrollProgressByChapter);
+                isScrollProgressByPart.setChecked(AppState.get().isScrollProgressByPart);
+                isScrollProgressByPart.setEnabled(AppState.get().isScrollProgressByChapter);
+
+                isScrollProgressByChapter.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    AppState.get().isScrollProgressByChapter = isChecked;
+                    isScrollProgressByPart.setEnabled(isChecked);
+                    if (!isChecked) {
+                        AppState.get().isScrollProgressByPart = false;
+                        isScrollProgressByPart.setChecked(false);
+                    }
+                    if (onRefresh != null) {
+                        onRefresh.run();
+                    }
+                });
+                isScrollProgressByPart.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    AppState.get().isScrollProgressByPart = isChecked;
+                    if (isChecked && !isScrollProgressByChapter.isChecked()) {
+                        isScrollProgressByChapter.setChecked(true);
+                    }
+                    if (onRefresh != null) {
+                        onRefresh.run();
+                    }
+                });
+
+                isShowChapterNavigationArrows.setChecked(AppState.get().isShowChapterNavigationArrows);
+                isShowChapterNavigationArrows.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    AppState.get().isShowChapterNavigationArrows = isChecked;
+                    if (onRefresh != null) {
+                        onRefresh.run();
                     }
                 });
 
@@ -5506,10 +5554,28 @@ public class DragingDialogs {
                     }
                 });
 
-                ((CheckBox) inflate.findViewById(R.id.isRememberDictionary)).setChecked(AppState.get().isRememberDictionary);
-                ((CheckBox) inflate.findViewById(R.id.isRememberDictionary)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
+                CheckBox isRememberDictionary = inflate.findViewById(R.id.isRememberDictionary);
+                CheckBox isShowDictionaryAction = inflate.findViewById(R.id.isShowDictionaryAction);
+
+                isRememberDictionary.setChecked(AppState.get().isRememberDictionary);
+                isShowDictionaryAction.setChecked(AppState.get().isShowDictionaryAction);
+
+                isRememberDictionary.setOnCheckedChangeListener(new OnCheckedChangeListener() {
                     @Override public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
                         AppState.get().isRememberDictionary = isChecked;
+                        if (isChecked) {
+                            AppState.get().isShowDictionaryAction = false;
+                            isShowDictionaryAction.setChecked(false);
+                        }
+                    }
+                });
+                isShowDictionaryAction.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+                    @Override public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                        AppState.get().isShowDictionaryAction = isChecked;
+                        if (isChecked) {
+                            AppState.get().isRememberDictionary = false;
+                            isRememberDictionary.setChecked(false);
+                        }
                     }
                 });
 

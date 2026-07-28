@@ -20,6 +20,20 @@ Librera Reader is an e-book reader for Android devices;
 it supports the following formats: PDF, EPUB, EPUB3, MOBI, DjVu, FB2, TXT, RTF, AZW, AZW3, HTML, CBZ, CBR, DOC, DOCX,
 and OPDS Catalogs
 
+## Fork changes
+
+This fork adds optional reader controls while retaining Librera's default behavior:
+
+- A Preferences checkbox that shows the configured-dictionary action in the text-selection dialog without automatically opening it.
+- Status-bar checkboxes that scope the interactive progress bar to the current chapter/section or, through its nested option, the current module/part. The display-only progress bar remains whole-book progress.
+- Optional previous/next chapter arrows beside the interactive progress bar.
+
+The repeatable remote build runs unit tests, builds MuPDF native libraries, and assembles an F-Droid debug APK:
+
+~~~~
+modal run tools/modal_build.py
+~~~~
+
 # Download application
 
 [Librera Reader on Google Play](https://play.google.com/store/apps/details?id=com.foobnix.pdf.reader)
