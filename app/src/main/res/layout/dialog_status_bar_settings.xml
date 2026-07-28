@@ -90,6 +90,20 @@
             android:text="@string/show_chapter_navigation_arrows" />
 
         <CheckBox
+            android:id="@+id/isShowReadingTimeRemaining"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dip"
+            android:text="@string/show_reading_time_remaining" />
+
+        <com.foobnix.pdf.info.view.CustomSeek
+            android:id="@+id/readingTimeWordsPerMinute"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dip"
+            myseek:text="@string/reading_speed_wpm" />
+
+        <CheckBox
             android:id="@+id/isShowTime"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

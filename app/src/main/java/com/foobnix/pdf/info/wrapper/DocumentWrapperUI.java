@@ -49,6 +49,8 @@ import com.foobnix.pdf.info.OutlineHelper.Info;
 import com.foobnix.pdf.info.OutlineProgressHelper;
 import com.foobnix.pdf.info.OutlineProgressHelper.PageRange;
 import com.foobnix.pdf.info.R;
+import com.foobnix.pdf.info.ReadingTimeRemainingHelper;
+import com.foobnix.pdf.info.ReadingTimeRemainingLoader;
 import com.foobnix.pdf.info.TintUtil;
 import com.foobnix.pdf.info.UiSystemUtils;
 import com.foobnix.pdf.info.model.OutlineLinkWrapper;
@@ -101,6 +103,7 @@ public class DocumentWrapperUI {
     final DocumentController dc;
     final Handler handler = new Handler(Looper.getMainLooper());
     final Handler handlerTimer = new Handler(Looper.getMainLooper());
+    final ReadingTimeRemainingLoader readingTimeRemainingLoader;
 
     public View.OnClickListener onLockUnlock = new View.OnClickListener() {
 
@@ -194,7 +197,8 @@ public class DocumentWrapperUI {
     AdsFragmentActivity a;
     String bookTitle;
     TextView showRewardVideo, toastBrightnessText, floatingBookmarkTextView, pagesCountIndicator, currentSeek, maxSeek,
-            currentTime, bookName, nextTypeBootom, batteryLevel, lirbiLogo, reverseKeysIndicator, onSaveAnnotation;
+            currentTime, bookName, nextTypeBootom, batteryLevel, lirbiLogo, reverseKeysIndicator, onSaveAnnotation,
+            readingTimeRemaining, statusReadingTimeRemaining;
     public View.OnClickListener onModeChangeClick = new View.OnClickListener() {
 
         @Override
@@ -396,6 +400,7 @@ public class DocumentWrapperUI {
         AppState.get().editWith = AppState.EDIT_NONE;
 
         this.dc = controller;
+        readingTimeRemainingLoader = new ReadingTimeRemainingLoader(controller);
         controller.setUi(this);
 
         EventBus.getDefault().register(this);
@@ -696,6 +701,7 @@ public class DocumentWrapperUI {
 
     public void closeAndRunList() {
         EventBus.getDefault().unregister(this);
+        readingTimeRemainingLoader.shutdown();
 
         if (handler != null) {
             handler.removeCallbacksAndMessages(null);
@@ -730,6 +736,7 @@ public class DocumentWrapperUI {
         maxSeek.setText(info.textPage);
         currentSeek.setText(info.textMax);
         pagesCountIndicator.setText(info.chText);
+        updateReadingTimeRemaining();
 
         currentSeek.setContentDescription(dc.getString(R.string.m_current_page) + " " + info.textMax);
         maxSeek.setContentDescription(dc.getString(R.string.m_total_pages) + " " + info.textPage);
@@ -856,7 +863,45 @@ public class DocumentWrapperUI {
         seekBar.setMax(interactiveProgressRange.getPageCount() - 1);
         seekBar.setProgress(interactiveProgressRange.toRelativeProgress(dc.getCurentPageFirst1()));
         seekBar.setOnSeekBarChangeListener(onSeek);
+        updateInteractiveProgressLabels();
         updateChapterNavigationArrows();
+    }
+
+    private void updateInteractiveProgressLabels() {
+        if (!AppState.get().isScrollProgressByChapter) {
+            return;
+        }
+        int currentInScope =
+                interactiveProgressRange.toRelativeProgress(dc.getCurentPageFirst1()) + 1;
+        int pagesInScope = interactiveProgressRange.getPageCount();
+        currentSeek.setText(String.valueOf(currentInScope));
+        maxSeek.setText(String.valueOf(pagesInScope));
+        currentSeek.setContentDescription(
+                dc.getString(R.string.m_current_page) + " " + currentInScope);
+        maxSeek.setContentDescription(
+                dc.getString(R.string.m_total_pages) + " " + pagesInScope);
+    }
+
+    private void updateReadingTimeRemaining() {
+        int currentPage = dc.getCurentPageFirst1();
+        int pageCount = dc.getPageCount();
+        PageRange chapterRange = OutlineProgressHelper.calculateRange(dc.getCurrentOutline(),
+                                                                      currentPage,
+                                                                      pageCount,
+                                                                      false);
+        String calculating = a.getString(R.string.reading_time_calculating);
+        readingTimeRemaining.setText(calculating);
+        statusReadingTimeRemaining.setText(calculating);
+        readingTimeRemainingLoader.load(currentPage,
+                                        pageCount,
+                                        chapterRange.endPage,
+                                        AppState.get().readingTimeWordsPerMinute,
+                                        estimate -> {
+                                            String text =
+                                                    ReadingTimeRemainingHelper.format(a, estimate);
+                                            readingTimeRemaining.setText(text);
+                                            statusReadingTimeRemaining.setText(text);
+                                        });
     }
 
     private void goToAdjacentChapter(boolean next) {
@@ -1281,6 +1326,8 @@ public class DocumentWrapperUI {
 
         currentSeek = (TextView) a.findViewById(R.id.currentSeek);
         maxSeek = (TextView) a.findViewById(R.id.maxSeek);
+        readingTimeRemaining = (TextView) a.findViewById(R.id.readingTimeRemaining);
+        statusReadingTimeRemaining = (TextView) a.findViewById(R.id.statusReadingTimeRemaining);
         bookName = (TextView) a.findViewById(R.id.bookName);
 
         currentTime = (TextView) a.findViewById(R.id.currentTime);
@@ -1419,6 +1466,7 @@ public class DocumentWrapperUI {
         TintUtil.setTintImageWithAlpha(lockUnlockTop, textColor);
         TintUtil.setTintImageWithAlpha(nextScreenType, textColor);
         TintUtil.setTintText(pagesCountIndicator, textColor);
+        TintUtil.setTintText(statusReadingTimeRemaining, textColor);
         TintUtil.setTintText(currentTime, textColor);
         TintUtil.setTintText(batteryLevel, textColor);
         TintUtil.setTintText(reverseKeysIndicator, ColorUtils.setAlphaComponent(textColor, 200));
@@ -1442,6 +1490,7 @@ public class DocumentWrapperUI {
         // textSize
         bookName.setTextSize(AppState.get().statusBarTextSizeAdv);
         pagesCountIndicator.setTextSize(AppState.get().statusBarTextSizeAdv);
+        statusReadingTimeRemaining.setTextSize(AppState.get().statusBarTextSizeAdv);
         currentTime.setTextSize(AppState.get().statusBarTextSizeAdv);
         batteryLevel.setTextSize(AppState.get().statusBarTextSizeAdv);
         reverseKeysIndicator.setTextSize(AppState.get().statusBarTextSizeAdv);
@@ -1696,6 +1745,8 @@ public class DocumentWrapperUI {
 
         currentTime.setVisibility(AppState.get().isShowTime ? View.VISIBLE : View.GONE);
         clockIcon.setVisibility(AppState.get().isShowTime ? View.VISIBLE : View.GONE);
+        statusReadingTimeRemaining.setVisibility(
+                AppState.get().isShowReadingTimeRemaining ? View.VISIBLE : View.GONE);
 
     }
 
@@ -2178,6 +2229,7 @@ public class DocumentWrapperUI {
 
     public void onDestroy() {
         LOG.d("DocumentWrapperUI", "onDestroy");
+        readingTimeRemainingLoader.shutdown();
         handlerTimer.removeCallbacksAndMessages(null);
         handler.removeCallbacksAndMessages(null);
 

@@ -118,6 +118,7 @@ import com.foobnix.pdf.info.IMG;
 import com.foobnix.pdf.info.OutlineHelper;
 import com.foobnix.pdf.info.PageUrl;
 import com.foobnix.pdf.info.R;
+import com.foobnix.pdf.info.ReadingTimeRemainingHelper;
 import com.foobnix.pdf.info.TintUtil;
 import com.foobnix.pdf.info.Urls;
 import com.foobnix.pdf.info.model.AnnotationType;
@@ -3333,6 +3334,10 @@ public class DragingDialogs {
                 final CheckBox isScrollProgressByPart = inflate.findViewById(R.id.isScrollProgressByPart);
                 final CheckBox isShowChapterNavigationArrows =
                         inflate.findViewById(R.id.isShowChapterNavigationArrows);
+                final CheckBox isShowReadingTimeRemaining =
+                        inflate.findViewById(R.id.isShowReadingTimeRemaining);
+                final CustomSeek readingTimeWordsPerMinute =
+                        inflate.findViewById(R.id.readingTimeWordsPerMinute);
 
                 isShowReadingProgress.setChecked(AppState.get().isShowReadingProgress);
                 isShowReadingProgress.setOnCheckedChangeListener(new OnCheckedChangeListener() {
@@ -3418,6 +3423,35 @@ public class DragingDialogs {
                     AppState.get().isShowChapterNavigationArrows = isChecked;
                     if (onRefresh != null) {
                         onRefresh.run();
+                    }
+                });
+
+                isShowReadingTimeRemaining.setChecked(AppState.get().isShowReadingTimeRemaining);
+                isShowReadingTimeRemaining.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    AppState.get().isShowReadingTimeRemaining = isChecked;
+                    if (onRefresh != null) {
+                        onRefresh.run();
+                    }
+                });
+
+                int readingSpeed = ReadingTimeRemainingHelper.sanitizeWordsPerMinute(
+                        AppState.get().readingTimeWordsPerMinute);
+                AppState.get().readingTimeWordsPerMinute = readingSpeed;
+                readingTimeWordsPerMinute.setTitleTextWidth(Dips.dpToPx(100));
+                readingTimeWordsPerMinute.setStep(10);
+                readingTimeWordsPerMinute.init(
+                        ReadingTimeRemainingHelper.MIN_WORDS_PER_MINUTE,
+                        ReadingTimeRemainingHelper.MAX_WORDS_PER_MINUTE,
+                        readingSpeed,
+                        controller.getString(R.string.words_per_minute_suffix));
+                readingTimeWordsPerMinute.setOnSeekChanged(new IntegerResponse() {
+                    @Override public boolean onResultRecive(int result) {
+                        AppState.get().readingTimeWordsPerMinute =
+                                ReadingTimeRemainingHelper.sanitizeWordsPerMinute(result);
+                        if (onRefresh != null) {
+                            onRefresh.run();
+                        }
+                        return false;
                     }
                 });
 

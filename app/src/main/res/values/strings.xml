@@ -484,9 +484,26 @@
    <string name="normalize_font_size">Normalize font size</string>
    <string name="display_chapters_on_the_progress_line">Module/part tick marks</string>
    <string name="display_sub_chapters_on_the_progress_line">Chapter/section tick marks</string>
-   <string name="scroll_progress_within_chapter">Scroll progress bar within chapter/section</string>
+   <string name="scroll_progress_within_chapter">Seek within chapter/section</string>
    <string name="scroll_progress_within_part">Use module/part instead</string>
-   <string name="show_chapter_navigation_arrows">Show chapter arrows on progress bar</string>
+   <string name="show_chapter_navigation_arrows">Show chapter arrows on seek bar</string>
+   <string name="show_reading_time_remaining">Show reading time left in status bar</string>
+   <string name="reading_speed_wpm">Reading speed</string>
+   <string name="words_per_minute_suffix"> WPM</string>
+   <string name="reading_time_calculating">Calculating reading time…</string>
+   <string name="reading_time_unavailable">Reading time unavailable</string>
+   <string name="reading_time_left_in_chapter">%1$s left in chapter</string>
+   <string name="reading_time_left_in_book">%1$s left in book</string>
+   <string name="reading_time_remaining_combined">%1$s\n%2$s</string>
+   <string name="reading_time_hours_and_minutes">%1$s %2$s</string>
+   <plurals name="reading_time_minutes">
+      <item quantity="one">%1$d min</item>
+      <item quantity="other">%1$d mins</item>
+   </plurals>
+   <plurals name="reading_time_hours">
+      <item quantity="one">%1$d hr</item>
+      <item quantity="other">%1$d hrs</item>
+   </plurals>
    <string name="previous_chapter">Previous chapter</string>
    <string name="next_chapter">Next chapter</string>
    <string name="enable_vertical_gesture">Turn pages by vertical swipes</string>

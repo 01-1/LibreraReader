@@ -129,6 +129,18 @@
                     android:textSize="12sp" />
 
                 <TextView
+                    android:id="@+id/statusReadingTimeRemaining"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="2"
+                    android:gravity="center"
+                    android:maxLines="2"
+                    android:text="@string/reading_time_calculating"
+                    android:textColor="@color/tint_gray"
+                    android:textSize="9sp"
+                    android:visibility="gone" />
+
+                <TextView
                     android:id="@+id/flippingIntervalView"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"

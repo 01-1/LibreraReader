@@ -25,8 +25,9 @@ and OPDS Catalogs
 This fork adds optional reader controls while retaining Librera's default behavior:
 
 - A Preferences checkbox that shows the configured-dictionary action in the text-selection dialog without automatically opening it.
-- Status-bar checkboxes that scope the interactive progress bar to the current chapter/section or, through its nested option, the current module/part. The display-only progress bar remains whole-book progress.
-- Optional previous/next chapter arrows beside the interactive progress bar.
+- Status-bar checkboxes that scope the interactive seek bar to the current chapter/section or, through its nested option, the current module/part. The display-only progress bar remains whole-book progress.
+- Optional previous/next chapter arrows beside the seek bar.
+- Chapter and whole-book reading-time estimates based on the actual remaining text, with configurable reading speed in words per minute. Estimates always appear in the expanded reader controls and can optionally appear in the status bar.
 
 The repeatable remote build runs unit tests, builds MuPDF native libraries, and assembles an F-Droid debug APK:
 

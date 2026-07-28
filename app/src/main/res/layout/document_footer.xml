@@ -163,6 +163,19 @@
                 android:textSize="14sp" />
         </LinearLayout>
 
+        <TextView
+            android:id="@+id/readingTimeRemaining"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:maxLines="2"
+            android:paddingLeft="4dip"
+            android:paddingRight="4dip"
+            android:paddingBottom="2dip"
+            android:text="@string/reading_time_calculating"
+            android:textColor="#ffffff"
+            android:textSize="12sp" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

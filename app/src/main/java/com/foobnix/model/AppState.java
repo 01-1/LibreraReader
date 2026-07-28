@@ -354,6 +354,8 @@ public class AppState {
     public boolean isScrollProgressByChapter;
     public boolean isScrollProgressByPart;
     public boolean isShowChapterNavigationArrows;
+    @IgnoreHashCode public boolean isShowReadingTimeRemaining;
+    @IgnoreHashCode public int readingTimeWordsPerMinute = 200;
     public int antiAliasLevel = 8;//0-8
     // n,
     // 25 - 25%

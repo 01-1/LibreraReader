@@ -80,6 +80,18 @@
                 android:textSize="@dimen/title_h_adv" />
 
             <TextView
+                android:id="@+id/statusReadingTimeRemaining"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="6dip"
+                android:layout_weight="0"
+                android:gravity="center"
+                android:maxLines="2"
+                android:text="@string/reading_time_calculating"
+                android:textSize="9sp"
+                android:visibility="gone" />
+
+            <TextView
                 android:id="@+id/reverseKeysIndicator"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

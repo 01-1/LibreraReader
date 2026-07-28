@@ -69,6 +69,8 @@ import com.foobnix.pdf.info.OutlineProgressHelper;
 import com.foobnix.pdf.info.OutlineProgressHelper.PageRange;
 import com.foobnix.pdf.info.PasswordDialog;
 import com.foobnix.pdf.info.R;
+import com.foobnix.pdf.info.ReadingTimeRemainingHelper;
+import com.foobnix.pdf.info.ReadingTimeRemainingLoader;
 import com.foobnix.pdf.info.TintUtil;
 import com.foobnix.pdf.info.UiSystemUtils;
 import com.foobnix.pdf.info.view.AlertDialogs;
@@ -127,7 +129,8 @@ public class HorizontalViewActivity extends AdsFragmentActivity {
     VerticalViewPager viewPager;
     SeekBar seekBar;
     TextView showRewardVideo, toastBrightnessText, floatingBookmarkTextView, maxSeek, currentSeek, pagesCountIndicator,
-            flippingIntervalView, pagesTime, pagesTime1, pagesPower, titleTxt, chapterView, modeName, pannelBookTitle;
+            flippingIntervalView, pagesTime, pagesTime1, pagesPower, titleTxt, chapterView, modeName, pannelBookTitle,
+            readingTimeRemaining, statusReadingTimeRemaining;
     View bottomBar, bottomIndicators, onClose, overlay, musicButtonPanel, parentParent;
     LinearLayout actionBar, bottomPanel;
     TTSControlsView ttsActive;
@@ -145,6 +148,7 @@ public class HorizontalViewActivity extends AdsFragmentActivity {
     volatile int isInitOrientation;
     ProgressDraw progressDraw;
     PageRange interactiveProgressRange = PageRange.wholeBook(1);
+    ReadingTimeRemainingLoader readingTimeRemainingLoader;
     LinearLayout pageshelper;
     String quickBookmark;
     ClickUtils clickUtils;
@@ -411,6 +415,7 @@ public class HorizontalViewActivity extends AdsFragmentActivity {
 
         currentSeek = (TextView) findViewById(R.id.currentSeek);
         maxSeek = (TextView) findViewById(R.id.maxSeek);
+        readingTimeRemaining = (TextView) findViewById(R.id.readingTimeRemaining);
 
         toastBrightnessText = (TextView) findViewById(R.id.toastBrightnessText);
         toastBrightnessText.setVisibility(View.GONE);
@@ -425,6 +430,7 @@ public class HorizontalViewActivity extends AdsFragmentActivity {
         }
 
         pagesCountIndicator = (TextView) findViewById(R.id.pagesCountIndicator);
+        statusReadingTimeRemaining = (TextView) findViewById(R.id.statusReadingTimeRemaining);
         flippingIntervalView = (TextView) findViewById(R.id.flippingIntervalView);
         pagesTime = (TextView) findViewById(R.id.pagesTime);
         pagesTime1 = (TextView) findViewById(R.id.pagesTime1);
@@ -1318,6 +1324,7 @@ public class HorizontalViewActivity extends AdsFragmentActivity {
         TintUtil.setTintText(pagesPower, TintUtil.getStatusBarColor());
         TintUtil.setTintText(pagesTime, TintUtil.getStatusBarColor());
         TintUtil.setTintText(pagesCountIndicator, TintUtil.getStatusBarColor());
+        TintUtil.setTintText(statusReadingTimeRemaining, TintUtil.getStatusBarColor());
         TintUtil.setTintText(pannelBookTitle, TintUtil.getStatusBarColor());
         TintUtil.setTintText(flippingIntervalView, TintUtil.getStatusBarColor());
 
@@ -1332,6 +1339,7 @@ public class HorizontalViewActivity extends AdsFragmentActivity {
         pagesTime.setTextSize(AppState.get().statusBarTextSizeEasy);
         pagesTime1.setTextSize(AppState.get().statusBarTextSizeEasy);
         pagesCountIndicator.setTextSize(AppState.get().statusBarTextSizeEasy);
+        statusReadingTimeRemaining.setTextSize(AppState.get().statusBarTextSizeEasy);
         pannelBookTitle.setTextSize((AppState.get().statusBarTextSizeEasy + 2));
         flippingIntervalView.setTextSize(AppState.get().statusBarTextSizeEasy);
 
@@ -1436,6 +1444,8 @@ public class HorizontalViewActivity extends AdsFragmentActivity {
         if (AppState.get().isShowToolBar) {
             pagesPower.setVisibility(AppState.get().isShowBattery ? View.VISIBLE : View.INVISIBLE);
             pagesTime.setVisibility(AppState.get().isShowTime ? View.VISIBLE : View.INVISIBLE);
+            statusReadingTimeRemaining.setVisibility(
+                    AppState.get().isShowReadingTimeRemaining ? View.VISIBLE : View.GONE);
         }
 
         RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) bottomPanel.getLayoutParams();
@@ -1515,6 +1525,10 @@ public class HorizontalViewActivity extends AdsFragmentActivity {
             } catch (Exception e) {
                 LOG.e(e);
             }
+        }
+        if (readingTimeRemainingLoader != null) {
+            readingTimeRemainingLoader.shutdown();
+            readingTimeRemainingLoader = null;
         }
         if (handler != null) {
             handler.removeCallbacksAndMessages(null);
@@ -1766,6 +1780,7 @@ public class HorizontalViewActivity extends AdsFragmentActivity {
             }
 
         };
+        readingTimeRemainingLoader = new ReadingTimeRemainingLoader(dc);
         // dc.init(this);
         dc.initAnchor(anchor);
     }
@@ -1788,6 +1803,7 @@ public class HorizontalViewActivity extends AdsFragmentActivity {
         maxSeek.setContentDescription(dc.getString(R.string.m_total_pages) + " " + info.textPage);
 
         dc.currentPage = page;
+        updateReadingTimeRemaining();
         updateInteractiveProgressBar();
 
         pagesTime.setText(UiSystemUtils.getSystemTime(this));
@@ -1829,7 +1845,48 @@ public class HorizontalViewActivity extends AdsFragmentActivity {
         seekBar.setMax(interactiveProgressRange.getPageCount() - 1);
         seekBar.setProgress(interactiveProgressRange.toRelativeProgress(dc.getCurentPageFirst1()));
         seekBar.setOnSeekBarChangeListener(onSeek);
+        updateInteractiveProgressLabels();
         updateChapterNavigationArrows();
+    }
+
+    private void updateInteractiveProgressLabels() {
+        if (!AppState.get().isScrollProgressByChapter) {
+            return;
+        }
+        int currentInScope =
+                interactiveProgressRange.toRelativeProgress(dc.getCurentPageFirst1()) + 1;
+        int pagesInScope = interactiveProgressRange.getPageCount();
+        currentSeek.setText(String.valueOf(currentInScope));
+        maxSeek.setText(String.valueOf(pagesInScope));
+        currentSeek.setContentDescription(
+                dc.getString(R.string.m_current_page) + " " + currentInScope);
+        maxSeek.setContentDescription(
+                dc.getString(R.string.m_total_pages) + " " + pagesInScope);
+    }
+
+    private void updateReadingTimeRemaining() {
+        if (readingTimeRemainingLoader == null) {
+            return;
+        }
+        int currentPage = dc.getCurentPageFirst1();
+        int pageCount = dc.getPageCount();
+        PageRange chapterRange = OutlineProgressHelper.calculateRange(dc.getCurrentOutline(),
+                                                                      currentPage,
+                                                                      pageCount,
+                                                                      false);
+        String calculating = getString(R.string.reading_time_calculating);
+        readingTimeRemaining.setText(calculating);
+        statusReadingTimeRemaining.setText(calculating);
+        readingTimeRemainingLoader.load(currentPage,
+                                        pageCount,
+                                        chapterRange.endPage,
+                                        AppState.get().readingTimeWordsPerMinute,
+                                        estimate -> {
+                                            String text =
+                                                    ReadingTimeRemainingHelper.format(this, estimate);
+                                            readingTimeRemaining.setText(text);
+                                            statusReadingTimeRemaining.setText(text);
+                                        });
     }
 
     private void goToAdjacentChapter(boolean next) {
@@ -1876,6 +1933,7 @@ public class HorizontalViewActivity extends AdsFragmentActivity {
         viewPager.addOnPageChangeListener(onViewPagerChangeListener);
         viewPager.setCurrentItem(dc.getCurentPage(), false);
 
+        updateReadingTimeRemaining();
         updateInteractiveProgressBar();
 
         bottomIndicators.setOnTouchListener(new HorizontallSeekTouchEventListener(onSeek, dc.getPageCount(), false));
