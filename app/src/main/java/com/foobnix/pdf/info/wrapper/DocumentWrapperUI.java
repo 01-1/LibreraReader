@@ -883,17 +883,27 @@ public class DocumentWrapperUI {
     }
 
     private void updateReadingTimeRemaining() {
-        final boolean showChapter = AppState.get().isShowChapterReadingTimeRemaining;
-        final boolean showBook = AppState.get().isShowBookReadingTimeRemaining;
-        final boolean hasEstimate = showChapter || showBook;
-        final boolean showExpanded =
-                hasEstimate && AppState.get().isShowReadingTimeInExpandedControls;
-        final boolean showStatus =
-                hasEstimate && AppState.get().isShowReadingTimeRemaining;
+        final boolean showChapterExpanded =
+                AppState.get().isShowChapterReadingTimeInExpandedControls;
+        final boolean showBookExpanded =
+                AppState.get().isShowBookReadingTimeInExpandedControls;
+        final boolean showChapterStatus =
+                AppState.get().isShowChapterReadingTimeInStatusBar;
+        final boolean showBookStatus =
+                AppState.get().isShowBookReadingTimeInStatusBar;
+        final boolean showExpanded = showChapterExpanded || showBookExpanded;
+        final boolean showStatus = showChapterStatus || showBookStatus;
+        final boolean loadChapter = ReadingTimeRemainingHelper.shouldLoadChapter(
+                showChapterExpanded, showChapterStatus);
+        final boolean loadBook = ReadingTimeRemainingHelper.shouldLoadBook(
+                showBookExpanded, showBookStatus);
         readingTimeRemaining.setVisibility(showExpanded ? View.VISIBLE : View.GONE);
         statusReadingTimeRemaining.setVisibility(showStatus ? View.VISIBLE : View.GONE);
         if (!ReadingTimeRemainingHelper.shouldLoad(
-                showChapter, showBook, showExpanded, showStatus)) {
+                showChapterExpanded,
+                showBookExpanded,
+                showChapterStatus,
+                showBookStatus)) {
             readingTimeRemainingLoader.cancel();
             readingTimeRemaining.setText("");
             statusReadingTimeRemaining.setText("");
@@ -907,21 +917,26 @@ public class DocumentWrapperUI {
                                                                       pageCount,
                                                                       false);
         final String[] text = new String[] {
-                showChapter ? a.getString(R.string.reading_time_calculating_chapter) : null,
-                showBook ? a.getString(R.string.reading_time_calculating_book) : null
+                loadChapter ? a.getString(R.string.reading_time_calculating_chapter) : null,
+                loadBook ? a.getString(R.string.reading_time_calculating_book) : null
         };
         final Runnable applyText = () -> {
-            String combined = ReadingTimeRemainingHelper.combine(a, text[0], text[1]);
-            readingTimeRemaining.setText(combined);
-            statusReadingTimeRemaining.setText(combined);
+            readingTimeRemaining.setText(ReadingTimeRemainingHelper.combine(
+                    a,
+                    showChapterExpanded ? text[0] : null,
+                    showBookExpanded ? text[1] : null));
+            statusReadingTimeRemaining.setText(ReadingTimeRemainingHelper.combine(
+                    a,
+                    showChapterStatus ? text[0] : null,
+                    showBookStatus ? text[1] : null));
         };
         applyText.run();
         readingTimeRemainingLoader.load(currentPage,
                                         pageCount,
                                         chapterRange.endPage,
                                         AppState.get().readingTimeWordsPerMinute,
-                                        showChapter,
-                                        showBook,
+                                        loadChapter,
+                                        loadBook,
                                         new ReadingTimeRemainingLoader.Callback() {
                                             @Override
                                             public void onChapterResult(int words, int minutes) {
@@ -1781,9 +1796,8 @@ public class DocumentWrapperUI {
         currentTime.setVisibility(AppState.get().isShowTime ? View.VISIBLE : View.GONE);
         clockIcon.setVisibility(AppState.get().isShowTime ? View.VISIBLE : View.GONE);
         statusReadingTimeRemaining.setVisibility(
-                AppState.get().isShowReadingTimeRemaining &&
-                        (AppState.get().isShowChapterReadingTimeRemaining ||
-                                AppState.get().isShowBookReadingTimeRemaining) ?
+                AppState.get().isShowChapterReadingTimeInStatusBar ||
+                        AppState.get().isShowBookReadingTimeInStatusBar ?
                         View.VISIBLE : View.GONE);
 
     }

@@ -114,11 +114,22 @@ public final class ReadingTimeRemainingHelper {
                         Math.min(MAX_WORDS_PER_MINUTE, wordsPerMinute));
     }
 
-    public static boolean shouldLoad(boolean showChapter,
-                                     boolean showBook,
-                                     boolean showExpandedControls,
-                                     boolean showStatusBar) {
-        return (showChapter || showBook) && (showExpandedControls || showStatusBar);
+    public static boolean shouldLoad(boolean showChapterInExpandedControls,
+                                     boolean showBookInExpandedControls,
+                                     boolean showChapterInStatusBar,
+                                     boolean showBookInStatusBar) {
+        return shouldLoadChapter(showChapterInExpandedControls, showChapterInStatusBar) ||
+                shouldLoadBook(showBookInExpandedControls, showBookInStatusBar);
+    }
+
+    public static boolean shouldLoadChapter(boolean showInExpandedControls,
+                                            boolean showInStatusBar) {
+        return showInExpandedControls || showInStatusBar;
+    }
+
+    public static boolean shouldLoadBook(boolean showInExpandedControls,
+                                         boolean showInStatusBar) {
+        return showInExpandedControls || showInStatusBar;
     }
 
     public static Estimate calculate(int chapterWordsRemaining,

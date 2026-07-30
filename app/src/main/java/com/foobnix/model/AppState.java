@@ -354,10 +354,16 @@ public class AppState {
     public boolean isScrollProgressByChapter;
     public boolean isScrollProgressByPart;
     public boolean isShowChapterNavigationArrows;
+    // Legacy reading-time switches retained only for v1.1.2 settings migration.
     @IgnoreHashCode public boolean isShowChapterReadingTimeRemaining = true;
     @IgnoreHashCode public boolean isShowBookReadingTimeRemaining = true;
     @IgnoreHashCode public boolean isShowReadingTimeInExpandedControls = true;
     @IgnoreHashCode public boolean isShowReadingTimeRemaining;
+    @IgnoreHashCode public boolean isShowChapterReadingTimeInExpandedControls = true;
+    @IgnoreHashCode public boolean isShowBookReadingTimeInExpandedControls = true;
+    @IgnoreHashCode public boolean isShowChapterReadingTimeInStatusBar;
+    @IgnoreHashCode public boolean isShowBookReadingTimeInStatusBar;
+    @IgnoreHashCode public int readingTimeVisibilityMatrixVersion;
     @IgnoreHashCode public int readingTimeWordsPerMinute = 200;
     public int antiAliasLevel = 8;//0-8
     // n,
@@ -711,6 +717,7 @@ public class AppState {
             defaults(a);
 
             load(a);
+            migrateReadingTimeVisibilityMatrix();
             if (AppState.get().isShowPanelBookNameBookMode && AppState.get().statusBarPosition == com.foobnix.model.AppState.STATUSBAR_POSITION_TOP) {
                 AppState.get().isShowPanelBookNameBookMode = false;
             }
@@ -739,6 +746,21 @@ public class AppState {
         }
 
         return init;
+    }
+
+    private void migrateReadingTimeVisibilityMatrix() {
+        if (readingTimeVisibilityMatrixVersion >= 1) {
+            return;
+        }
+        isShowChapterReadingTimeInExpandedControls =
+                isShowChapterReadingTimeRemaining && isShowReadingTimeInExpandedControls;
+        isShowBookReadingTimeInExpandedControls =
+                isShowBookReadingTimeRemaining && isShowReadingTimeInExpandedControls;
+        isShowChapterReadingTimeInStatusBar =
+                isShowChapterReadingTimeRemaining && isShowReadingTimeRemaining;
+        isShowBookReadingTimeInStatusBar =
+                isShowBookReadingTimeRemaining && isShowReadingTimeRemaining;
+        readingTimeVisibilityMatrixVersion = 1;
     }
 
     public void load(final Context a) {

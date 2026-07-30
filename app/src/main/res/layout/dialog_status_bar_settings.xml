@@ -90,32 +90,32 @@
             android:text="@string/show_chapter_navigation_arrows" />
 
         <CheckBox
-            android:id="@+id/isShowChapterReadingTimeRemaining"
+            android:id="@+id/isShowChapterReadingTimeInExpandedControls"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dip"
-            android:text="@string/show_chapter_reading_time_remaining" />
+            android:text="@string/show_chapter_reading_time_in_expanded_controls" />
 
         <CheckBox
-            android:id="@+id/isShowBookReadingTimeRemaining"
+            android:id="@+id/isShowBookReadingTimeInExpandedControls"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dip"
-            android:text="@string/show_book_reading_time_remaining" />
+            android:text="@string/show_book_reading_time_in_expanded_controls" />
 
         <CheckBox
-            android:id="@+id/isShowReadingTimeInExpandedControls"
+            android:id="@+id/isShowChapterReadingTimeInStatusBar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dip"
-            android:text="@string/show_reading_time_in_expanded_controls" />
+            android:text="@string/show_chapter_reading_time_in_status_bar" />
 
         <CheckBox
-            android:id="@+id/isShowReadingTimeRemaining"
+            android:id="@+id/isShowBookReadingTimeInStatusBar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dip"
-            android:text="@string/show_reading_time_remaining" />
+            android:text="@string/show_book_reading_time_in_status_bar" />
 
         <com.foobnix.pdf.info.view.CustomSeek
             android:id="@+id/readingTimeWordsPerMinute"

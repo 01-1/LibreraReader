@@ -487,10 +487,10 @@
    <string name="scroll_progress_within_chapter">Seek within chapter/section</string>
    <string name="scroll_progress_within_part">Use module/part instead</string>
    <string name="show_chapter_navigation_arrows">Show chapter arrows on seek bar</string>
-   <string name="show_chapter_reading_time_remaining">Show chapter reading time left</string>
-   <string name="show_book_reading_time_remaining">Show book reading time left</string>
-   <string name="show_reading_time_in_expanded_controls">Show enabled reading times in expanded reader controls</string>
-   <string name="show_reading_time_remaining">Show enabled reading times in status bar</string>
+   <string name="show_chapter_reading_time_in_expanded_controls">Show chapter reading time in expanded reader controls</string>
+   <string name="show_book_reading_time_in_expanded_controls">Show book reading time in expanded reader controls</string>
+   <string name="show_chapter_reading_time_in_status_bar">Show chapter reading time in status bar</string>
+   <string name="show_book_reading_time_in_status_bar">Show book reading time in status bar</string>
    <string name="reading_speed_wpm">Reading speed</string>
    <string name="words_per_minute_suffix"> WPM</string>
    <string name="reading_time_calculating">Calculating reading time…</string>

@@ -1,8 +1,6 @@
 package com.foobnix.pdf.info;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 import com.foobnix.pdf.info.ReadingTimeRemainingHelper.Estimate;
 
@@ -60,10 +58,30 @@ public class ReadingTimeRemainingHelperTest {
     }
 
     @Test
-    public void statusBarCanLoadWithoutExpandedReaderControls() {
-        assertTrue(ReadingTimeRemainingHelper.shouldLoad(true, true, false, true));
-        assertTrue(ReadingTimeRemainingHelper.shouldLoad(true, false, true, false));
-        assertFalse(ReadingTimeRemainingHelper.shouldLoad(true, true, false, false));
-        assertFalse(ReadingTimeRemainingHelper.shouldLoad(false, false, true, true));
+    public void everyReadingTimeVisibilityCombinationLoadsIndependently() {
+        for (int mask = 0; mask < 16; mask++) {
+            boolean chapterExpanded = (mask & 1) != 0;
+            boolean bookExpanded = (mask & 2) != 0;
+            boolean chapterStatus = (mask & 4) != 0;
+            boolean bookStatus = (mask & 8) != 0;
+            assertEquals(
+                    "chapter visibility mask " + mask,
+                    chapterExpanded || chapterStatus,
+                    ReadingTimeRemainingHelper.shouldLoadChapter(
+                            chapterExpanded, chapterStatus));
+            assertEquals(
+                    "book visibility mask " + mask,
+                    bookExpanded || bookStatus,
+                    ReadingTimeRemainingHelper.shouldLoadBook(
+                            bookExpanded, bookStatus));
+            assertEquals(
+                    "visibility mask " + mask,
+                    mask != 0,
+                    ReadingTimeRemainingHelper.shouldLoad(
+                            chapterExpanded,
+                            bookExpanded,
+                            chapterStatus,
+                            bookStatus));
+        }
     }
 }

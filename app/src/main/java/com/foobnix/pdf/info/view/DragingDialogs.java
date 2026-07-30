@@ -3334,14 +3334,14 @@ public class DragingDialogs {
                 final CheckBox isScrollProgressByPart = inflate.findViewById(R.id.isScrollProgressByPart);
                 final CheckBox isShowChapterNavigationArrows =
                         inflate.findViewById(R.id.isShowChapterNavigationArrows);
-                final CheckBox isShowChapterReadingTimeRemaining =
-                        inflate.findViewById(R.id.isShowChapterReadingTimeRemaining);
-                final CheckBox isShowBookReadingTimeRemaining =
-                        inflate.findViewById(R.id.isShowBookReadingTimeRemaining);
-                final CheckBox isShowReadingTimeInExpandedControls =
-                        inflate.findViewById(R.id.isShowReadingTimeInExpandedControls);
-                final CheckBox isShowReadingTimeRemaining =
-                        inflate.findViewById(R.id.isShowReadingTimeRemaining);
+                final CheckBox isShowChapterReadingTimeInExpandedControls =
+                        inflate.findViewById(R.id.isShowChapterReadingTimeInExpandedControls);
+                final CheckBox isShowBookReadingTimeInExpandedControls =
+                        inflate.findViewById(R.id.isShowBookReadingTimeInExpandedControls);
+                final CheckBox isShowChapterReadingTimeInStatusBar =
+                        inflate.findViewById(R.id.isShowChapterReadingTimeInStatusBar);
+                final CheckBox isShowBookReadingTimeInStatusBar =
+                        inflate.findViewById(R.id.isShowBookReadingTimeInStatusBar);
                 final CustomSeek readingTimeWordsPerMinute =
                         inflate.findViewById(R.id.readingTimeWordsPerMinute);
 
@@ -3432,54 +3432,43 @@ public class DragingDialogs {
                     }
                 });
 
-                isShowChapterReadingTimeRemaining.setChecked(
-                        AppState.get().isShowChapterReadingTimeRemaining);
-                isShowBookReadingTimeRemaining.setChecked(
-                        AppState.get().isShowBookReadingTimeRemaining);
-                isShowReadingTimeInExpandedControls.setChecked(
-                        AppState.get().isShowReadingTimeInExpandedControls);
-                isShowReadingTimeRemaining.setChecked(AppState.get().isShowReadingTimeRemaining);
-                boolean hasReadingTimeEstimate =
-                        AppState.get().isShowChapterReadingTimeRemaining ||
-                                AppState.get().isShowBookReadingTimeRemaining;
-                isShowReadingTimeInExpandedControls.setEnabled(hasReadingTimeEstimate);
-                isShowReadingTimeRemaining.setEnabled(hasReadingTimeEstimate);
+                isShowChapterReadingTimeInExpandedControls.setChecked(
+                        AppState.get().isShowChapterReadingTimeInExpandedControls);
+                isShowBookReadingTimeInExpandedControls.setChecked(
+                        AppState.get().isShowBookReadingTimeInExpandedControls);
+                isShowChapterReadingTimeInStatusBar.setChecked(
+                        AppState.get().isShowChapterReadingTimeInStatusBar);
+                isShowBookReadingTimeInStatusBar.setChecked(
+                        AppState.get().isShowBookReadingTimeInStatusBar);
 
-                isShowChapterReadingTimeRemaining.setOnCheckedChangeListener(
+                isShowChapterReadingTimeInExpandedControls.setOnCheckedChangeListener(
                         (buttonView, isChecked) -> {
-                            AppState.get().isShowChapterReadingTimeRemaining = isChecked;
-                            boolean hasEstimate = isChecked ||
-                                    isShowBookReadingTimeRemaining.isChecked();
-                            isShowReadingTimeInExpandedControls.setEnabled(hasEstimate);
-                            isShowReadingTimeRemaining.setEnabled(hasEstimate);
+                            AppState.get().isShowChapterReadingTimeInExpandedControls = isChecked;
                             if (onRefresh != null) {
                                 onRefresh.run();
                             }
                         });
-                isShowBookReadingTimeRemaining.setOnCheckedChangeListener(
+                isShowBookReadingTimeInExpandedControls.setOnCheckedChangeListener(
                         (buttonView, isChecked) -> {
-                            AppState.get().isShowBookReadingTimeRemaining = isChecked;
-                            boolean hasEstimate = isChecked ||
-                                    isShowChapterReadingTimeRemaining.isChecked();
-                            isShowReadingTimeInExpandedControls.setEnabled(hasEstimate);
-                            isShowReadingTimeRemaining.setEnabled(hasEstimate);
+                            AppState.get().isShowBookReadingTimeInExpandedControls = isChecked;
                             if (onRefresh != null) {
                                 onRefresh.run();
                             }
                         });
-                isShowReadingTimeInExpandedControls.setOnCheckedChangeListener(
+                isShowChapterReadingTimeInStatusBar.setOnCheckedChangeListener(
                         (buttonView, isChecked) -> {
-                            AppState.get().isShowReadingTimeInExpandedControls = isChecked;
+                            AppState.get().isShowChapterReadingTimeInStatusBar = isChecked;
                             if (onRefresh != null) {
                                 onRefresh.run();
                             }
                         });
-                isShowReadingTimeRemaining.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                    AppState.get().isShowReadingTimeRemaining = isChecked;
-                    if (onRefresh != null) {
-                        onRefresh.run();
-                    }
-                });
+                isShowBookReadingTimeInStatusBar.setOnCheckedChangeListener(
+                        (buttonView, isChecked) -> {
+                            AppState.get().isShowBookReadingTimeInStatusBar = isChecked;
+                            if (onRefresh != null) {
+                                onRefresh.run();
+                            }
+                        });
 
                 int readingSpeed = ReadingTimeRemainingHelper.sanitizeWordsPerMinute(
                         AppState.get().readingTimeWordsPerMinute);

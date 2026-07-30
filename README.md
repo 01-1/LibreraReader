@@ -27,7 +27,7 @@ This fork adds optional reader controls while retaining Librera's default behavi
 - A Preferences checkbox that shows the configured-dictionary action in the text-selection dialog without automatically opening it.
 - Status-bar checkboxes that scope the interactive seek bar to the current chapter/section or, through its nested option, the current module/part. The display-only progress bar remains whole-book progress.
 - Optional previous/next chapter arrows beside the seek bar.
-- Separately optional chapter and whole-book reading-time estimates based on actual remaining words, with configurable reading speed in words per minute. Expanded-reader and status-bar display have independent checkboxes, so either location can be used without the other. EPUB estimates use spine/XHTML text rather than scanning reflowed layout pages; fixed-layout documents use direct native text-word counts rather than HTML serialization.
+- Chapter and whole-book reading-time estimates based on actual remaining words, with configurable reading speed in words per minute. Four independent checkboxes control chapter and book estimates separately in expanded reader controls and in the status bar, allowing every content-and-location combination. EPUB estimates use spine/XHTML text rather than scanning reflowed layout pages; fixed-layout documents use direct native text-word counts rather than HTML serialization.
 
 The repeatable remote build runs unit tests, builds MuPDF native libraries, and assembles an F-Droid debug APK:
 
