@@ -1,6 +1,8 @@
 package com.foobnix.pdf.info;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import com.foobnix.pdf.info.ReadingTimeRemainingHelper.Estimate;
 
@@ -37,6 +39,12 @@ public class ReadingTimeRemainingHelperTest {
         assertEquals(0, ReadingTimeRemainingHelper.minutesForWords(0, 200));
         assertEquals(1, ReadingTimeRemainingHelper.minutesForWords(1, 200));
         assertEquals(2, ReadingTimeRemainingHelper.minutesForWords(201, 200));
+    }
+
+    @Test
+    public void zeroWordsIsAValidBoundaryEstimate() {
+        assertFalse(ReadingTimeRemainingHelper.isUnavailableWordCount(0));
+        assertTrue(ReadingTimeRemainingHelper.isUnavailableWordCount(-1));
     }
 
     @Test

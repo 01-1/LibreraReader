@@ -55,6 +55,18 @@ public class EpubReadingTimeIndexHelperTest {
         assertEquals(2, position.sourceWord);
         assertEquals(10, position.chapterWordsRemaining);
         assertEquals(17, position.bookWordsRemaining);
+
+        EpubReadingTimeIndex.Position chapterBoundary = index.positionAt(12);
+        assertNotNull(chapterBoundary);
+        assertEquals(12, chapterBoundary.sourceWord);
+        assertEquals(7, chapterBoundary.chapterWordsRemaining);
+        assertEquals(7, chapterBoundary.bookWordsRemaining);
+
+        EpubReadingTimeIndex.Position bookEnd = index.positionAt(19);
+        assertNotNull(bookEnd);
+        assertEquals(19, bookEnd.sourceWord);
+        assertEquals(0, bookEnd.chapterWordsRemaining);
+        assertEquals(0, bookEnd.bookWordsRemaining);
     }
 
     @Test

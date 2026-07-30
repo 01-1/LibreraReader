@@ -166,7 +166,7 @@ public final class ReadingTimeRemainingHelper {
     }
 
     public static String formatChapter(Context context, int words, int minutes) {
-        if (words <= 0) {
+        if (isUnavailableWordCount(words)) {
             return context.getString(R.string.chapter_reading_time_unavailable);
         }
         return context.getString(R.string.reading_time_left_in_chapter,
@@ -174,11 +174,15 @@ public final class ReadingTimeRemainingHelper {
     }
 
     public static String formatBook(Context context, int words, int minutes) {
-        if (words <= 0) {
+        if (isUnavailableWordCount(words)) {
             return context.getString(R.string.book_reading_time_unavailable);
         }
         return context.getString(R.string.reading_time_left_in_book,
                                  formatDuration(context.getResources(), minutes));
+    }
+
+    static boolean isUnavailableWordCount(int words) {
+        return words < 0;
     }
 
     public static String combine(Context context, String chapter, String book) {

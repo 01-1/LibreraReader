@@ -114,10 +114,22 @@ final class EpubReadingTimeIndex {
         if (wordIndex < 0) {
             return null;
         }
-        SpineSection section = findSection(wordIndex);
+        return positionAt(wordIndex);
+    }
+
+    Position positionAt(int requestedWordIndex) {
+        if (words.isEmpty()) {
+            return null;
+        }
+        int wordIndex = Math.max(0, Math.min(words.size(), requestedWordIndex));
+        if (wordIndex == words.size()) {
+            return new Position(wordIndex, 0, 0);
+        }
+        SpineSection section = findSectionAtOrAfter(wordIndex);
         if (section == null) {
             return null;
         }
+        wordIndex = Math.max(wordIndex, section.startWord);
         return new Position(wordIndex,
                             Math.max(0, section.endWord - wordIndex),
                             Math.max(0, words.size() - wordIndex));
@@ -240,9 +252,9 @@ final class EpubReadingTimeIndex {
         return true;
     }
 
-    private SpineSection findSection(int wordIndex) {
+    private SpineSection findSectionAtOrAfter(int wordIndex) {
         for (SpineSection section : sections) {
-            if (wordIndex >= section.startWord && wordIndex < section.endWord) {
+            if (section.endWord > section.startWord && wordIndex < section.endWord) {
                 return section;
             }
         }

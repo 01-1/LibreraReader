@@ -9,6 +9,8 @@ import com.foobnix.pdf.info.wrapper.DocumentController;
 import org.ebookdroid.BookType;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,6 +21,10 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public final class ReadingTimeRemainingLoader {
+
+    private static final int EPUB_PAGE_TEXT_ATTEMPTS = 3;
+    private static final int EPUB_NEARBY_PAGE_LIMIT = 2;
+    private static final long EPUB_PAGE_TEXT_RETRY_DELAY_MS = 75L;
 
     public interface Callback {
         void onChapterResult(int wordsRemaining, int minutesRemaining);
@@ -41,7 +47,6 @@ public final class ReadingTimeRemainingLoader {
     private Future<?> activeRequest;
     private int cachedPageCount = -1;
     private EpubReadingTimeIndex epubIndex;
-    private boolean epubIndexFailed;
     private int lastEpubSourceWord = -1;
     private boolean isShutdown;
 
@@ -135,19 +140,26 @@ public final class ReadingTimeRemainingLoader {
                           boolean calculateBook,
                           Callback callback) {
         try {
-            if (epubIndex == null && !epubIndexFailed) {
+            if (epubIndex == null) {
                 epubIndex = EpubReadingTimeIndex.load(controller.getCurrentBook());
             }
-            List<String> pageWords = getPageWords(currentPage - 1);
-            EpubReadingTimeIndex.Position position = epubIndex == null ? null :
-                    epubIndex.locate(pageWords, lastEpubSourceWord);
-            if (position == null) {
+            EpubAnchor anchor = epubIndex == null ? null :
+                    locateEpubAnchor(currentPage - 1, pageCount);
+            if (anchor == null && epubIndex != null && lastEpubSourceWord >= 0) {
+                EpubReadingTimeIndex.Position lastPosition =
+                        epubIndex.positionAt(lastEpubSourceWord);
+                if (lastPosition != null) {
+                    anchor = new EpubAnchor(lastPosition, Collections.emptyList());
+                }
+            }
+            if (anchor == null) {
                 postUnavailable(requestGeneration,
                                 calculateChapter,
                                 calculateBook,
                                 callback);
                 return;
             }
+            EpubReadingTimeIndex.Position position = anchor.position;
             lastEpubSourceWord = position.sourceWord;
             if (calculateChapter) {
                 int chapterWords = position.chapterWordsRemaining;
@@ -155,7 +167,7 @@ public final class ReadingTimeRemainingLoader {
                     List<String> nextChapterWords = getPageWords(chapterEndPage);
                     EpubReadingTimeIndex.Position nextChapter =
                             epubIndex.locate(nextChapterWords,
-                                             position.sourceWord + pageWords.size());
+                                             position.sourceWord + anchor.pageWords.size());
                     if (nextChapter != null &&
                             nextChapter.sourceWord > position.sourceWord) {
                         chapterWords = nextChapter.sourceWord - position.sourceWord;
@@ -174,11 +186,68 @@ public final class ReadingTimeRemainingLoader {
             }
         } catch (IOException error) {
             LOG.e(error);
-            epubIndexFailed = true;
             postUnavailable(requestGeneration, calculateChapter, calculateBook, callback);
         } catch (RuntimeException error) {
             LOG.e(error);
             postUnavailable(requestGeneration, calculateChapter, calculateBook, callback);
+        }
+    }
+
+    private EpubAnchor locateEpubAnchor(int currentPage, int pageCount) {
+        for (int attempt = 0; attempt < EPUB_PAGE_TEXT_ATTEMPTS; attempt++) {
+            EpubAnchor anchor = locateEpubPage(currentPage, lastEpubSourceWord);
+            if (anchor != null) {
+                return anchor;
+            }
+            pageWordsByPage.remove(currentPage);
+            if (attempt + 1 < EPUB_PAGE_TEXT_ATTEMPTS && !waitForPageTextRetry()) {
+                return null;
+            }
+        }
+
+        for (int distance = 1; distance <= EPUB_NEARBY_PAGE_LIMIT; distance++) {
+            int forwardPage = currentPage + distance;
+            if (forwardPage < pageCount) {
+                EpubAnchor anchor = locateEpubPage(forwardPage, lastEpubSourceWord);
+                if (anchor != null) {
+                    return anchor;
+                }
+            }
+        }
+
+        for (int distance = 1; distance <= EPUB_NEARBY_PAGE_LIMIT; distance++) {
+            int previousPage = currentPage - distance;
+            if (previousPage < 0) {
+                break;
+            }
+            EpubAnchor previous = locateEpubPage(previousPage, lastEpubSourceWord);
+            if (previous != null) {
+                EpubReadingTimeIndex.Position afterPrevious = epubIndex.positionAt(
+                        previous.position.sourceWord + previous.pageWords.size());
+                if (afterPrevious != null) {
+                    return new EpubAnchor(afterPrevious, Collections.emptyList());
+                }
+            }
+        }
+        return null;
+    }
+
+    private EpubAnchor locateEpubPage(int page, int previousWordHint) {
+        List<String> pageWords = getPageWords(page);
+        if (pageWords.isEmpty()) {
+            return null;
+        }
+        EpubReadingTimeIndex.Position position = epubIndex.locate(pageWords, previousWordHint);
+        return position == null ? null : new EpubAnchor(position, pageWords);
+    }
+
+    private static boolean waitForPageTextRetry() {
+        try {
+            Thread.sleep(EPUB_PAGE_TEXT_RETRY_DELAY_MS);
+            return true;
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            return false;
         }
     }
 
@@ -187,10 +256,10 @@ public final class ReadingTimeRemainingLoader {
                                  boolean calculateBook,
                                  Callback callback) {
         if (calculateChapter) {
-            postChapter(requestGeneration, 0, 0, callback);
+            postChapter(requestGeneration, -1, 0, callback);
         }
         if (calculateBook) {
-            postBook(requestGeneration, 0, 0, callback);
+            postBook(requestGeneration, -1, 0, callback);
         }
     }
 
@@ -238,12 +307,28 @@ public final class ReadingTimeRemainingLoader {
         if (cached != null) {
             return cached;
         }
-        List<String> words = controller.getWordsForPage(zeroBasedPage);
-        if (words == null) {
-            words = java.util.Collections.emptyList();
+        List<String> words;
+        try {
+            words = controller.getWordsForPage(zeroBasedPage);
+        } catch (RuntimeException error) {
+            return Collections.emptyList();
         }
-        pageWordsByPage.put(zeroBasedPage, words);
-        return words;
+        if (words == null || words.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<String> stableWords = Collections.unmodifiableList(new ArrayList<>(words));
+        pageWordsByPage.put(zeroBasedPage, stableWords);
+        return stableWords;
+    }
+
+    private static final class EpubAnchor {
+        final EpubReadingTimeIndex.Position position;
+        final List<String> pageWords;
+
+        EpubAnchor(EpubReadingTimeIndex.Position position, List<String> pageWords) {
+            this.position = position;
+            this.pageWords = pageWords;
+        }
     }
 
     public synchronized void cancel() {
