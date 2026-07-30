@@ -4,6 +4,7 @@ import datetime
 import hashlib
 import json
 import os
+import secrets
 import shutil
 import subprocess
 from pathlib import Path
@@ -18,6 +19,12 @@ WORK_DIR = Path("/tmp/librera")
 app = modal.App("librera-fork-build")
 artifacts = modal.Volume.from_name("librera-build-artifacts", create_if_missing=True)
 build_cache = modal.Volume.from_name("librera-build-cache", create_if_missing=True)
+signing = modal.Volume.from_name("librera-build-signing", create_if_missing=True)
+
+SIGNING_DIR = Path("/signing")
+SIGNING_KEYSTORE = SIGNING_DIR / "librera-fork.keystore"
+SIGNING_PASSWORD = SIGNING_DIR / "keystore-password"
+SIGNING_ALIAS = "librera-fork"
 
 image = (
     modal.Image.from_registry("eclipse-temurin:21-jdk-jammy", add_python="3.11")
@@ -73,17 +80,24 @@ image = (
 )
 
 
-def run(command: list[str], *, cwd: Path = WORK_DIR, env: dict[str, str] | None = None) -> None:
-    print("+", " ".join(command), flush=True)
+def run(
+    command: list[str],
+    *,
+    cwd: Path = WORK_DIR,
+    env: dict[str, str] | None = None,
+    log_command: bool = True,
+) -> None:
+    if log_command:
+        print("+", " ".join(command), flush=True)
     subprocess.run(command, cwd=cwd, env=env, check=True)
 
 
-def write_gradle_properties() -> None:
+def write_gradle_properties(signing_password: str) -> None:
     properties = {
-        "RELEASE_STORE_FILE": "/tmp/librera-build.keystore",
-        "RELEASE_STORE_PASSWORD": "android",
-        "RELEASE_KEY_PASSWORD": "android",
-        "RELEASE_KEY_ALIAS": "librera-build",
+        "RELEASE_STORE_FILE": str(SIGNING_KEYSTORE),
+        "RELEASE_STORE_PASSWORD": signing_password,
+        "RELEASE_KEY_PASSWORD": signing_password,
+        "RELEASE_KEY_ALIAS": SIGNING_ALIAS,
         "librera_appGdriveKey": "",
         "librera_admobAppId": "",
         "librera_admobBannerId": "",
@@ -121,6 +135,69 @@ def write_gradle_properties() -> None:
         output.write("\n# Ephemeral Modal build properties\n")
         for key, value in properties.items():
             output.write(f"{key}={value}\n")
+
+
+def ensure_signing_keystore(env: dict[str, str]) -> str:
+    has_keystore = SIGNING_KEYSTORE.is_file()
+    has_password = SIGNING_PASSWORD.is_file()
+    if has_keystore != has_password:
+        raise RuntimeError("Persistent signing volume is incomplete")
+    if has_keystore:
+        return SIGNING_PASSWORD.read_text(encoding="utf-8").strip()
+
+    signing_password = secrets.token_urlsafe(32)
+    SIGNING_DIR.mkdir(parents=True, exist_ok=True)
+    SIGNING_PASSWORD.write_text(signing_password + "\n", encoding="utf-8")
+    SIGNING_PASSWORD.chmod(0o600)
+    run(
+        [
+            "keytool",
+            "-genkeypair",
+            "-noprompt",
+            "-keystore",
+            str(SIGNING_KEYSTORE),
+            "-storepass",
+            signing_password,
+            "-keypass",
+            signing_password,
+            "-alias",
+            SIGNING_ALIAS,
+            "-keyalg",
+            "RSA",
+            "-keysize",
+            "3072",
+            "-validity",
+            "10000",
+            "-dname",
+            "CN=Librera Fork,OU=Release,O=Librera Fork,L=Local,ST=None,C=XX",
+        ],
+        env=env,
+        log_command=False,
+    )
+    SIGNING_KEYSTORE.chmod(0o600)
+    signing.commit()
+    return signing_password
+
+
+def apk_signer_sha256(apk_path: Path, env: dict[str, str]) -> str:
+    result = subprocess.run(
+        [
+            f"{ANDROID_HOME}/build-tools/36.0.0/apksigner",
+            "verify",
+            "--print-certs",
+            str(apk_path),
+        ],
+        cwd=WORK_DIR,
+        env=env,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    prefix = "Signer #1 certificate SHA-256 digest:"
+    for line in result.stdout.splitlines():
+        if line.startswith(prefix):
+            return line[len(prefix):].strip()
+    raise RuntimeError(f"Signer SHA-256 digest missing for {apk_path.name}")
 
 
 def write_google_services_stub() -> None:
@@ -188,7 +265,11 @@ def build_native_libraries(env: dict[str, str]) -> int:
     cpu=8.0,
     memory=16384,
     timeout=7200,
-    volumes={"/artifacts": artifacts, "/cache": build_cache},
+    volumes={
+        "/artifacts": artifacts,
+        "/cache": build_cache,
+        "/signing": signing,
+    },
 )
 def build() -> dict[str, object]:
     shutil.copytree(SOURCE_DIR, WORK_DIR, symlinks=True)
@@ -198,32 +279,9 @@ def build() -> dict[str, object]:
     env["ANDROID_HOME"] = ANDROID_HOME
     env["ANDROID_SDK_ROOT"] = ANDROID_HOME
 
-    write_gradle_properties()
+    signing_password = ensure_signing_keystore(env)
+    write_gradle_properties(signing_password)
     write_google_services_stub()
-    run(
-        [
-            "keytool",
-            "-genkeypair",
-            "-noprompt",
-            "-keystore",
-            "/tmp/librera-build.keystore",
-            "-storepass",
-            "android",
-            "-keypass",
-            "android",
-            "-alias",
-            "librera-build",
-            "-keyalg",
-            "RSA",
-            "-keysize",
-            "2048",
-            "-validity",
-            "3650",
-            "-dname",
-            "CN=Librera Fork Build,OU=Build,O=Librera Fork,L=Local,ST=None,C=XX",
-        ],
-        env=env,
-    )
 
     run(
         [
@@ -237,11 +295,14 @@ def build() -> dict[str, object]:
         env=env,
     )
     native_library_count = build_native_libraries(env)
-    run(["./gradlew", ":app:assembleFdroidDebug", "--no-daemon", "--stacktrace"], env=env)
+    run(["./gradlew", ":app:assembleFdroidRelease", "--no-daemon", "--stacktrace"], env=env)
 
-    apk_paths = sorted((WORK_DIR / "app/build/outputs/apk/fdroid/debug").glob("*.apk"))
+    apk_paths = sorted((WORK_DIR / "app/build/outputs/apk/fdroid/release").glob("*.apk"))
     if not apk_paths:
-        raise RuntimeError("Gradle completed without producing F-Droid debug APKs")
+        raise RuntimeError("Gradle completed without producing F-Droid release APKs")
+    signer_digests = {apk_signer_sha256(path, env) for path in apk_paths}
+    if len(signer_digests) != 1:
+        raise RuntimeError("APK outputs do not share one signing certificate")
 
     run_id = datetime.datetime.now(datetime.UTC).strftime("%Y%m%dT%H%M%SZ")
     artifact_dir = Path("/artifacts") / run_id
@@ -259,6 +320,7 @@ def build() -> dict[str, object]:
         "artifact_dir": str(artifact_dir),
         "apks": [path.name for path in apk_paths],
         "native_library_count": native_library_count,
+        "signer_sha256": signer_digests.pop(),
         "sha256": checksums,
     }
     (artifact_dir / "build-result.json").write_text(

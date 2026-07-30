@@ -3338,6 +3338,8 @@ public class DragingDialogs {
                         inflate.findViewById(R.id.isShowChapterReadingTimeRemaining);
                 final CheckBox isShowBookReadingTimeRemaining =
                         inflate.findViewById(R.id.isShowBookReadingTimeRemaining);
+                final CheckBox isShowReadingTimeInExpandedControls =
+                        inflate.findViewById(R.id.isShowReadingTimeInExpandedControls);
                 final CheckBox isShowReadingTimeRemaining =
                         inflate.findViewById(R.id.isShowReadingTimeRemaining);
                 final CustomSeek readingTimeWordsPerMinute =
@@ -3434,20 +3436,22 @@ public class DragingDialogs {
                         AppState.get().isShowChapterReadingTimeRemaining);
                 isShowBookReadingTimeRemaining.setChecked(
                         AppState.get().isShowBookReadingTimeRemaining);
+                isShowReadingTimeInExpandedControls.setChecked(
+                        AppState.get().isShowReadingTimeInExpandedControls);
                 isShowReadingTimeRemaining.setChecked(AppState.get().isShowReadingTimeRemaining);
-                isShowReadingTimeRemaining.setEnabled(
+                boolean hasReadingTimeEstimate =
                         AppState.get().isShowChapterReadingTimeRemaining ||
-                                AppState.get().isShowBookReadingTimeRemaining);
+                                AppState.get().isShowBookReadingTimeRemaining;
+                isShowReadingTimeInExpandedControls.setEnabled(hasReadingTimeEstimate);
+                isShowReadingTimeRemaining.setEnabled(hasReadingTimeEstimate);
 
                 isShowChapterReadingTimeRemaining.setOnCheckedChangeListener(
                         (buttonView, isChecked) -> {
                             AppState.get().isShowChapterReadingTimeRemaining = isChecked;
                             boolean hasEstimate = isChecked ||
                                     isShowBookReadingTimeRemaining.isChecked();
+                            isShowReadingTimeInExpandedControls.setEnabled(hasEstimate);
                             isShowReadingTimeRemaining.setEnabled(hasEstimate);
-                            if (!hasEstimate) {
-                                isShowReadingTimeRemaining.setChecked(false);
-                            }
                             if (onRefresh != null) {
                                 onRefresh.run();
                             }
@@ -3457,10 +3461,15 @@ public class DragingDialogs {
                             AppState.get().isShowBookReadingTimeRemaining = isChecked;
                             boolean hasEstimate = isChecked ||
                                     isShowChapterReadingTimeRemaining.isChecked();
+                            isShowReadingTimeInExpandedControls.setEnabled(hasEstimate);
                             isShowReadingTimeRemaining.setEnabled(hasEstimate);
-                            if (!hasEstimate) {
-                                isShowReadingTimeRemaining.setChecked(false);
+                            if (onRefresh != null) {
+                                onRefresh.run();
                             }
+                        });
+                isShowReadingTimeInExpandedControls.setOnCheckedChangeListener(
+                        (buttonView, isChecked) -> {
+                            AppState.get().isShowReadingTimeInExpandedControls = isChecked;
                             if (onRefresh != null) {
                                 onRefresh.run();
                             }

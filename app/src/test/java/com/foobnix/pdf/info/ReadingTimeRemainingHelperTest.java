@@ -1,6 +1,8 @@
 package com.foobnix.pdf.info;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import com.foobnix.pdf.info.ReadingTimeRemainingHelper.Estimate;
 
@@ -55,5 +57,13 @@ public class ReadingTimeRemainingHelperTest {
 
         assertEquals(2_000, estimate.bookWords);
         assertEquals(10, estimate.bookMinutes);
+    }
+
+    @Test
+    public void statusBarCanLoadWithoutExpandedReaderControls() {
+        assertTrue(ReadingTimeRemainingHelper.shouldLoad(true, true, false, true));
+        assertTrue(ReadingTimeRemainingHelper.shouldLoad(true, false, true, false));
+        assertFalse(ReadingTimeRemainingHelper.shouldLoad(true, true, false, false));
+        assertFalse(ReadingTimeRemainingHelper.shouldLoad(false, false, true, true));
     }
 }

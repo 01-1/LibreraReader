@@ -356,6 +356,7 @@ public class AppState {
     public boolean isShowChapterNavigationArrows;
     @IgnoreHashCode public boolean isShowChapterReadingTimeRemaining = true;
     @IgnoreHashCode public boolean isShowBookReadingTimeRemaining = true;
+    @IgnoreHashCode public boolean isShowReadingTimeInExpandedControls = true;
     @IgnoreHashCode public boolean isShowReadingTimeRemaining;
     @IgnoreHashCode public int readingTimeWordsPerMinute = 200;
     public int antiAliasLevel = 8;//0-8

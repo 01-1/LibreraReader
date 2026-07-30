@@ -885,12 +885,15 @@ public class DocumentWrapperUI {
     private void updateReadingTimeRemaining() {
         final boolean showChapter = AppState.get().isShowChapterReadingTimeRemaining;
         final boolean showBook = AppState.get().isShowBookReadingTimeRemaining;
-        final boolean showAny = showChapter || showBook;
-        readingTimeRemaining.setVisibility(showAny ? View.VISIBLE : View.GONE);
-        statusReadingTimeRemaining.setVisibility(
-                showAny && AppState.get().isShowReadingTimeRemaining ?
-                        View.VISIBLE : View.GONE);
-        if (!showAny) {
+        final boolean hasEstimate = showChapter || showBook;
+        final boolean showExpanded =
+                hasEstimate && AppState.get().isShowReadingTimeInExpandedControls;
+        final boolean showStatus =
+                hasEstimate && AppState.get().isShowReadingTimeRemaining;
+        readingTimeRemaining.setVisibility(showExpanded ? View.VISIBLE : View.GONE);
+        statusReadingTimeRemaining.setVisibility(showStatus ? View.VISIBLE : View.GONE);
+        if (!ReadingTimeRemainingHelper.shouldLoad(
+                showChapter, showBook, showExpanded, showStatus)) {
             readingTimeRemainingLoader.cancel();
             readingTimeRemaining.setText("");
             statusReadingTimeRemaining.setText("");

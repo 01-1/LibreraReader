@@ -57,6 +57,43 @@ public class EpubReadingTimeIndexHelperTest {
         assertEquals(17, position.bookWordsRemaining);
     }
 
+    @Test
+    public void acceptsNamespacePrefixesAndToleratesRenderedTextDifferences()
+            throws Exception {
+        File epub = temporaryFolder.newFile("prefixed.epub");
+        try (ZipOutputStream output = new ZipOutputStream(new FileOutputStream(epub))) {
+            write(output,
+                  "META-INF/container.xml",
+                  "<?xml version=\"1.0\"?>" +
+                          "<ocf:container xmlns:ocf=\"urn:oasis:names:tc:opendocument:xmlns:container\">" +
+                          "<ocf:rootfiles><ocf:rootfile full-path=\"OPS/book.opf\"/>" +
+                          "</ocf:rootfiles></ocf:container>");
+            write(output,
+                  "OPS/book.opf",
+                  "<?xml version=\"1.0\"?>" +
+                          "<opf:package xmlns:opf=\"http://www.idpf.org/2007/opf\">" +
+                          "<opf:manifest><opf:item id=\"chapter\" href=\"chapter.xhtml\"/>" +
+                          "</opf:manifest><opf:spine><opf:itemref idref=\"chapter\"/>" +
+                          "</opf:spine></opf:package>");
+            write(output,
+                  "OPS/chapter.xhtml",
+                  "<html><body>alpha beta gamma delta epsilon zeta eta theta iota " +
+                          "kappa lambda mu nu xi omicron pi rho sigma tau upsilon " +
+                          "phi chi psi omega</body></html>");
+        }
+
+        EpubReadingTimeIndex index = EpubReadingTimeIndex.load(epub);
+        List<String> renderedWords = ReadingTimeRemainingHelper.tokenizeWords(
+                "alpha beta inserted gamma delta epsilon zeta eta theta iota " +
+                        "kappa lambda mu nu xi omicron pi rho sigma tau");
+        EpubReadingTimeIndex.Position position = index.locate(renderedWords, -1);
+
+        assertNotNull(position);
+        assertEquals(0, position.sourceWord);
+        assertEquals(24, position.chapterWordsRemaining);
+        assertEquals(24, position.bookWordsRemaining);
+    }
+
     private static void write(ZipOutputStream output, String name, String contents)
             throws Exception {
         output.putNextEntry(new ZipEntry(name));

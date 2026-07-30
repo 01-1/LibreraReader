@@ -13,9 +13,11 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -45,7 +47,7 @@ final class EpubReadingTimeIndex {
             }
 
             Document container = parseXml(zip, containerEntry);
-            Element rootFile = container.getElementsByTag("rootfile").first();
+            Element rootFile = firstByLocalName(container, "rootfile");
             if (rootFile == null || rootFile.attr("full-path").length() == 0) {
                 throw new IOException("EPUB package path is missing");
             }
@@ -58,7 +60,7 @@ final class EpubReadingTimeIndex {
 
             Document packageDocument = parseXml(zip, packageEntry);
             Map<String, String> manifest = new HashMap<>();
-            for (Element item : packageDocument.getElementsByTag("item")) {
+            for (Element item : elementsByLocalName(packageDocument, "item")) {
                 String id = item.attr("id");
                 String href = item.attr("href");
                 if (id.length() > 0 && href.length() > 0) {
@@ -66,14 +68,14 @@ final class EpubReadingTimeIndex {
                 }
             }
 
-            Element spine = packageDocument.getElementsByTag("spine").first();
+            Element spine = firstByLocalName(packageDocument, "spine");
             if (spine == null) {
                 throw new IOException("EPUB spine is missing");
             }
 
             List<String> allWords = new ArrayList<>();
             List<SpineSection> spineSections = new ArrayList<>();
-            for (Element itemRef : spine.getElementsByTag("itemref")) {
+            for (Element itemRef : elementsByLocalName(spine, "itemref")) {
                 if ("no".equalsIgnoreCase(itemRef.attr("linear"))) {
                     continue;
                 }
@@ -123,16 +125,11 @@ final class EpubReadingTimeIndex {
 
     private int findBestStart(List<String> pageWords, int previousWordHint) {
         int sampleLength = Math.min(MATCH_WORDS, pageWords.size());
-        int[] offsets = new int[] {
-                0,
-                Math.max(0, pageWords.size() / 4),
-                Math.max(0, pageWords.size() / 2)
-        };
         int bestStart = -1;
         int bestScore = -1;
         int bestDistance = Integer.MAX_VALUE;
 
-        for (int requestedOffset : offsets) {
+        for (int requestedOffset : sampleOffsets(pageWords.size())) {
             int sampleOffset = Math.min(requestedOffset, pageWords.size() - sampleLength);
             for (int source = 0; source + sampleLength <= words.size(); source++) {
                 if (!matches(words, source, pageWords, sampleOffset, sampleLength)) {
@@ -155,16 +152,76 @@ final class EpubReadingTimeIndex {
                 break;
             }
         }
-        return bestStart;
+        if (bestStart >= 0) {
+            return bestStart;
+        }
+        return findBestTolerantStart(pageWords, previousWordHint);
+    }
+
+    private int findBestTolerantStart(List<String> pageWords, int previousWordHint) {
+        int bestStart = -1;
+        int bestScore = -1;
+        int bestDistance = Integer.MAX_VALUE;
+        Set<Integer> scoredCandidates = new HashSet<>();
+
+        for (int targetOffset : sampleOffsets(pageWords.size())) {
+            String anchor = pageWords.get(targetOffset);
+            for (int source = 0; source < words.size(); source++) {
+                if (!anchor.equals(words.get(source))) {
+                    continue;
+                }
+                int candidateStart = source - targetOffset;
+                if (candidateStart < 0 || candidateStart >= words.size() ||
+                        !scoredCandidates.add(candidateStart)) {
+                    continue;
+                }
+                int score = score(candidateStart, pageWords);
+                int distance = previousWordHint < 0 ? candidateStart :
+                        Math.abs(candidateStart - previousWordHint);
+                if (score > bestScore || score == bestScore && distance < bestDistance) {
+                    bestStart = candidateStart;
+                    bestScore = score;
+                    bestDistance = distance;
+                }
+            }
+        }
+
+        int comparedWords = Math.min(SCORE_WORDS, pageWords.size());
+        int minimumScore = Math.max(3, Math.min(12, comparedWords / 4));
+        return bestScore >= minimumScore ? bestStart : -1;
+    }
+
+    private static int[] sampleOffsets(int wordCount) {
+        int last = Math.max(0, wordCount - 1);
+        return new int[] {
+                0,
+                Math.min(last, wordCount / 8),
+                Math.min(last, wordCount / 4),
+                Math.min(last, wordCount / 2),
+                Math.min(last, wordCount * 3 / 4)
+        };
     }
 
     private int score(int sourceStart, List<String> pageWords) {
-        int limit = Math.min(SCORE_WORDS,
-                             Math.min(pageWords.size(), words.size() - sourceStart));
+        int sourceLimit = Math.min(words.size(), sourceStart + SCORE_WORDS + 8);
+        int targetLimit = Math.min(pageWords.size(), SCORE_WORDS);
+        int source = sourceStart;
+        int target = 0;
         int score = 0;
-        for (int i = 0; i < limit; i++) {
-            if (words.get(sourceStart + i).equals(pageWords.get(i))) {
+        while (source < sourceLimit && target < targetLimit) {
+            if (words.get(source).equals(pageWords.get(target))) {
                 score++;
+                source++;
+                target++;
+            } else if (source + 1 < sourceLimit &&
+                    words.get(source + 1).equals(pageWords.get(target))) {
+                source++;
+            } else if (target + 1 < targetLimit &&
+                    words.get(source).equals(pageWords.get(target + 1))) {
+                target++;
+            } else {
+                source++;
+                target++;
             }
         }
         return score;
@@ -196,6 +253,24 @@ final class EpubReadingTimeIndex {
         try (InputStream input = zip.getInputStream(entry)) {
             return Jsoup.parse(input, null, "", Parser.xmlParser());
         }
+    }
+
+    private static Element firstByLocalName(Element root, String localName) {
+        List<Element> elements = elementsByLocalName(root, localName);
+        return elements.isEmpty() ? null : elements.get(0);
+    }
+
+    private static List<Element> elementsByLocalName(Element root, String localName) {
+        List<Element> matches = new ArrayList<>();
+        for (Element element : root.getAllElements()) {
+            String tagName = element.tagName();
+            int colon = tagName.indexOf(':');
+            String elementLocalName = colon < 0 ? tagName : tagName.substring(colon + 1);
+            if (localName.equalsIgnoreCase(elementLocalName)) {
+                matches.add(element);
+            }
+        }
+        return matches;
     }
 
     private static Map<String, ZipEntry> entriesByLowercaseName(ZipFile zip) {

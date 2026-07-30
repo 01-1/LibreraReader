@@ -413,8 +413,9 @@ public class VerticalModeController extends DocumentController {
                 return Collections.emptyList();
             }
             String plainText = codecPage.getPlainText();
-            return plainText != null ?
-                    ReadingTimeRemainingHelper.tokenizeWords(plainText) :
+            List<String> words = ReadingTimeRemainingHelper.tokenizeWords(plainText);
+            return !words.isEmpty() ?
+                    words :
                     ReadingTimeRemainingHelper.tokenizeTextWords(codecPage.getText());
         } catch (RuntimeException error) {
             LOG.e(error);
