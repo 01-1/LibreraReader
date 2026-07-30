@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.nio.charset.StandardCharsets;
 
 public class MuPdfPage extends AbstractCodecPage {
 
@@ -75,6 +76,10 @@ public class MuPdfPage extends AbstractCodecPage {
     private static native void getBounds(long dochandle, long handle, float[] bounds);
 
     private static native int getCharCount(long dochandle, long handle);
+
+    private static native int countWords(long dochandle, long handle);
+
+    private static native byte[] getPagePlainText(long dochandle, long handle);
 
     private static native void free(long dochandle, long handle);
 
@@ -326,6 +331,27 @@ public class MuPdfPage extends AbstractCodecPage {
         TempHolder.lock.lock();
         try {
             return getCharCount(docHandle, pageHandle);
+        } finally {
+            TempHolder.lock.unlock();
+        }
+    }
+
+    @Override
+    public int getWordCount() {
+        TempHolder.lock.lock();
+        try {
+            return countWords(docHandle, pageHandle);
+        } finally {
+            TempHolder.lock.unlock();
+        }
+    }
+
+    @Override
+    public String getPlainText() {
+        TempHolder.lock.lock();
+        try {
+            byte[] text = getPagePlainText(docHandle, pageHandle);
+            return text == null ? "" : new String(text, StandardCharsets.UTF_8);
         } finally {
             TempHolder.lock.unlock();
         }

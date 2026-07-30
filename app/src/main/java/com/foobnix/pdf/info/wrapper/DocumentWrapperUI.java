@@ -883,24 +883,56 @@ public class DocumentWrapperUI {
     }
 
     private void updateReadingTimeRemaining() {
+        final boolean showChapter = AppState.get().isShowChapterReadingTimeRemaining;
+        final boolean showBook = AppState.get().isShowBookReadingTimeRemaining;
+        final boolean showAny = showChapter || showBook;
+        readingTimeRemaining.setVisibility(showAny ? View.VISIBLE : View.GONE);
+        statusReadingTimeRemaining.setVisibility(
+                showAny && AppState.get().isShowReadingTimeRemaining ?
+                        View.VISIBLE : View.GONE);
+        if (!showAny) {
+            readingTimeRemainingLoader.cancel();
+            readingTimeRemaining.setText("");
+            statusReadingTimeRemaining.setText("");
+            return;
+        }
+
         int currentPage = dc.getCurentPageFirst1();
         int pageCount = dc.getPageCount();
         PageRange chapterRange = OutlineProgressHelper.calculateRange(dc.getCurrentOutline(),
                                                                       currentPage,
                                                                       pageCount,
                                                                       false);
-        String calculating = a.getString(R.string.reading_time_calculating);
-        readingTimeRemaining.setText(calculating);
-        statusReadingTimeRemaining.setText(calculating);
+        final String[] text = new String[] {
+                showChapter ? a.getString(R.string.reading_time_calculating_chapter) : null,
+                showBook ? a.getString(R.string.reading_time_calculating_book) : null
+        };
+        final Runnable applyText = () -> {
+            String combined = ReadingTimeRemainingHelper.combine(a, text[0], text[1]);
+            readingTimeRemaining.setText(combined);
+            statusReadingTimeRemaining.setText(combined);
+        };
+        applyText.run();
         readingTimeRemainingLoader.load(currentPage,
                                         pageCount,
                                         chapterRange.endPage,
                                         AppState.get().readingTimeWordsPerMinute,
-                                        estimate -> {
-                                            String text =
-                                                    ReadingTimeRemainingHelper.format(a, estimate);
-                                            readingTimeRemaining.setText(text);
-                                            statusReadingTimeRemaining.setText(text);
+                                        showChapter,
+                                        showBook,
+                                        new ReadingTimeRemainingLoader.Callback() {
+                                            @Override
+                                            public void onChapterResult(int words, int minutes) {
+                                                text[0] = ReadingTimeRemainingHelper.formatChapter(
+                                                        a, words, minutes);
+                                                applyText.run();
+                                            }
+
+                                            @Override
+                                            public void onBookResult(int words, int minutes) {
+                                                text[1] = ReadingTimeRemainingHelper.formatBook(
+                                                        a, words, minutes);
+                                                applyText.run();
+                                            }
                                         });
     }
 
@@ -1746,7 +1778,10 @@ public class DocumentWrapperUI {
         currentTime.setVisibility(AppState.get().isShowTime ? View.VISIBLE : View.GONE);
         clockIcon.setVisibility(AppState.get().isShowTime ? View.VISIBLE : View.GONE);
         statusReadingTimeRemaining.setVisibility(
-                AppState.get().isShowReadingTimeRemaining ? View.VISIBLE : View.GONE);
+                AppState.get().isShowReadingTimeRemaining &&
+                        (AppState.get().isShowChapterReadingTimeRemaining ||
+                                AppState.get().isShowBookReadingTimeRemaining) ?
+                        View.VISIBLE : View.GONE);
 
     }
 

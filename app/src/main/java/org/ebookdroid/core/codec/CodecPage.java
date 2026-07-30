@@ -49,4 +49,12 @@ public interface CodecPage {
 
     int getCharCount();
 
+    default int getWordCount() {
+        return -1;
+    }
+
+    default String getPlainText() {
+        return null;
+    }
+
 }

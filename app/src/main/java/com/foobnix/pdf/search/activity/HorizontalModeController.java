@@ -22,6 +22,7 @@ import com.foobnix.pdf.CopyAsyncTask;
 import com.foobnix.pdf.info.AppsConfig;
 import com.foobnix.pdf.info.ExtUtils;
 import com.foobnix.pdf.info.PageUrl;
+import com.foobnix.pdf.info.ReadingTimeRemainingHelper;
 import com.foobnix.pdf.info.model.AnnotationType;
 import com.foobnix.pdf.info.model.BookCSS;
 import com.foobnix.pdf.info.model.OutlineLinkWrapper;
@@ -331,6 +332,47 @@ public abstract class HorizontalModeController extends DocumentController {
             LOG.e(e);
         }
         return "";
+    }
+
+    @Override public synchronized List<String> getWordsForPage(int page) {
+        CodecPage codecPage = null;
+        try {
+            codecPage = codeDocument.getPage(page);
+            if (codecPage == null) {
+                return Collections.emptyList();
+            }
+            String plainText = codecPage.getPlainText();
+            return plainText != null ?
+                    ReadingTimeRemainingHelper.tokenizeWords(plainText) :
+                    ReadingTimeRemainingHelper.tokenizeTextWords(codecPage.getText());
+        } catch (RuntimeException error) {
+            LOG.e(error);
+            return Collections.emptyList();
+        } finally {
+            if (codecPage != null) {
+                codecPage.recycle();
+            }
+        }
+    }
+
+    @Override public synchronized int getWordCountForPage(int page) {
+        CodecPage codecPage = null;
+        try {
+            codecPage = codeDocument.getPage(page);
+            if (codecPage == null) {
+                return 0;
+            }
+            int nativeCount = codecPage.getWordCount();
+            return nativeCount >= 0 ? nativeCount :
+                    ReadingTimeRemainingHelper.countTextWords(codecPage.getText());
+        } catch (RuntimeException error) {
+            LOG.e(error);
+            return 0;
+        } finally {
+            if (codecPage != null) {
+                codecPage.recycle();
+            }
+        }
     }
 
     @Override public String getPageHtml() {

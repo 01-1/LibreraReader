@@ -27,6 +27,7 @@ import com.foobnix.model.AppSP;
 import com.foobnix.model.AppState;
 import com.foobnix.pdf.info.ExtUtils;
 import com.foobnix.pdf.info.PageUrl;
+import com.foobnix.pdf.info.ReadingTimeRemainingHelper;
 import com.foobnix.pdf.info.R;
 import com.foobnix.pdf.info.model.AnnotationType;
 import com.foobnix.pdf.info.model.OutlineLinkWrapper;
@@ -42,6 +43,7 @@ import org.ebookdroid.core.codec.Annotation;
 import org.ebookdroid.core.codec.CodecPage;
 import org.ebookdroid.core.codec.OutlineLink;
 import org.ebookdroid.core.codec.PageLink;
+import org.ebookdroid.core.codec.CodecPage;
 import org.ebookdroid.droids.mupdf.codec.MuPdfLinks;
 import org.ebookdroid.droids.mupdf.codec.TextWord;
 import org.ebookdroid.ui.viewer.ViewerActivityController;
@@ -400,6 +402,49 @@ public class VerticalModeController extends DocumentController {
         pageHTML = pageHTML.replace(TxtUtils.NON_BREAKE_SPACE, " ");
 
         return pageHTML;
+    }
+
+    @Override
+    public synchronized List<String> getWordsForPage(int page) {
+        CodecPage codecPage = null;
+        try {
+            codecPage = ctr.getDecodeService().getCodecDocument().getPage(page);
+            if (codecPage == null) {
+                return Collections.emptyList();
+            }
+            String plainText = codecPage.getPlainText();
+            return plainText != null ?
+                    ReadingTimeRemainingHelper.tokenizeWords(plainText) :
+                    ReadingTimeRemainingHelper.tokenizeTextWords(codecPage.getText());
+        } catch (RuntimeException error) {
+            LOG.e(error);
+            return Collections.emptyList();
+        } finally {
+            if (codecPage != null) {
+                codecPage.recycle();
+            }
+        }
+    }
+
+    @Override
+    public synchronized int getWordCountForPage(int page) {
+        CodecPage codecPage = null;
+        try {
+            codecPage = ctr.getDecodeService().getCodecDocument().getPage(page);
+            if (codecPage == null) {
+                return 0;
+            }
+            int nativeCount = codecPage.getWordCount();
+            return nativeCount >= 0 ? nativeCount :
+                    ReadingTimeRemainingHelper.countTextWords(codecPage.getText());
+        } catch (RuntimeException error) {
+            LOG.e(error);
+            return 0;
+        } finally {
+            if (codecPage != null) {
+                codecPage.recycle();
+            }
+        }
     }
 
     @Override

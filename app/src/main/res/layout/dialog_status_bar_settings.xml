@@ -90,6 +90,20 @@
             android:text="@string/show_chapter_navigation_arrows" />
 
         <CheckBox
+            android:id="@+id/isShowChapterReadingTimeRemaining"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dip"
+            android:text="@string/show_chapter_reading_time_remaining" />
+
+        <CheckBox
+            android:id="@+id/isShowBookReadingTimeRemaining"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dip"
+            android:text="@string/show_book_reading_time_remaining" />
+
+        <CheckBox
             android:id="@+id/isShowReadingTimeRemaining"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

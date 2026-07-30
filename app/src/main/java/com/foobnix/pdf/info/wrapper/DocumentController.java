@@ -818,6 +818,12 @@ public abstract class DocumentController {
 
     public abstract String getTextForPage(int page);
 
+    public int getWordCountForPage(int page) {
+        return getWordsForPage(page).size();
+    }
+
+    public abstract List<String> getWordsForPage(int page);
+
     public abstract String getPageHtml();
 
     public abstract List<PageLink> getLinksForPage(int page);

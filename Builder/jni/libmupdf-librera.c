@@ -10,6 +10,7 @@
 #include "../javahelpers.h"
 #include "mupdf/fitz.h"
 #include "mupdf/pdf.h"
+#include "mupdf/ucdn.h"
 #include "androidfonts.h"
 
 /* Debugging helper */
@@ -1333,6 +1334,136 @@ JNIEXPORT jobject
     }
 
     return arrayList;
+}
+
+static int
+is_word_rune(int rune)
+{
+    int category = ucdn_get_general_category(rune);
+    switch (category) {
+        case UCDN_GENERAL_CATEGORY_LL:
+        case UCDN_GENERAL_CATEGORY_LM:
+        case UCDN_GENERAL_CATEGORY_LO:
+        case UCDN_GENERAL_CATEGORY_LT:
+        case UCDN_GENERAL_CATEGORY_LU:
+        case UCDN_GENERAL_CATEGORY_ND:
+        case UCDN_GENERAL_CATEGORY_NL:
+        case UCDN_GENERAL_CATEGORY_NO:
+            return 1;
+        default:
+            return 0;
+    }
+}
+
+JNIEXPORT jint
+
+  JNICALL
+  Java_org_ebookdroid_droids_mupdf_codec_MuPdfPage_countWords(JNIEnv* env,
+                                                               jclass clazz,
+                                                               jlong handle,
+                                                               jlong pagehandle)
+{
+    renderdocument_t* doc_t = (renderdocument_t*)(long)handle;
+    renderpage_t* page = (renderpage_t*)(long)pagehandle;
+    fz_stext_page* stext = NULL;
+    int count = 0;
+    int in_word = 0;
+
+    if (!doc_t || !doc_t->ctx || !doc_t->document || !page || !page->page)
+        return 0;
+
+    fz_context* ctx = doc_t->ctx;
+    fz_var(stext);
+
+    fz_try(ctx)
+    {
+        stext = fz_new_stext_page_from_page(ctx, page->page, NULL);
+        for (fz_stext_block* block = stext->first_block; block; block = block->next) {
+            if (block->type != FZ_STEXT_BLOCK_TEXT)
+                continue;
+            for (fz_stext_line* line = block->u.t.first_line; line; line = line->next) {
+                for (fz_stext_char* ch = line->first_char; ch; ch = ch->next) {
+                    if (is_word_rune(ch->c)) {
+                        if (!in_word)
+                            count++;
+                        in_word = 1;
+                    } else {
+                        in_word = 0;
+                    }
+                }
+                in_word = 0;
+            }
+        }
+    }
+    fz_always(ctx)
+    {
+        fz_drop_stext_page(ctx, stext);
+    }
+    fz_catch(ctx)
+    {
+        return 0;
+    }
+    return count;
+}
+
+JNIEXPORT jbyteArray
+
+  JNICALL
+  Java_org_ebookdroid_droids_mupdf_codec_MuPdfPage_getPagePlainText(JNIEnv* env,
+                                                                    jclass clazz,
+                                                                    jlong handle,
+                                                                    jlong pagehandle)
+{
+    renderdocument_t* doc_t = (renderdocument_t*)(long)handle;
+    renderpage_t* page = (renderpage_t*)(long)pagehandle;
+    fz_stext_page* stext = NULL;
+    fz_buffer* buffer = NULL;
+    fz_output* output = NULL;
+    jbyteArray result = NULL;
+
+    if (!doc_t || !doc_t->ctx || !doc_t->document || !page || !page->page)
+        return NULL;
+
+    fz_context* ctx = doc_t->ctx;
+    fz_var(stext);
+    fz_var(buffer);
+    fz_var(output);
+
+    fz_try(ctx)
+    {
+        stext = fz_new_stext_page_from_page(ctx, page->page, NULL);
+        buffer = fz_new_buffer(ctx, 256);
+        output = fz_new_output_with_buffer(ctx, buffer);
+
+        for (fz_stext_block* block = stext->first_block; block; block = block->next) {
+            if (block->type != FZ_STEXT_BLOCK_TEXT)
+                continue;
+            for (fz_stext_line* line = block->u.t.first_line; line; line = line->next) {
+                for (fz_stext_char* ch = line->first_char; ch; ch = ch->next)
+                    fz_write_rune(ctx, output, ch->c);
+                fz_write_byte(ctx, output, '\n');
+            }
+        }
+        fz_close_output(ctx, output);
+
+        unsigned char* data = NULL;
+        size_t length = fz_buffer_storage(ctx, buffer, &data);
+        result = (*env)->NewByteArray(env, length);
+        if (result == NULL)
+            fz_throw(ctx, FZ_ERROR_GENERIC, "Failed to make plain text byte array");
+        (*env)->SetByteArrayRegion(env, result, 0, length, (const jbyte*)data);
+    }
+    fz_always(ctx)
+    {
+        fz_drop_stext_page(ctx, stext);
+        fz_drop_output(ctx, output);
+        fz_drop_buffer(ctx, buffer);
+    }
+    fz_catch(ctx)
+    {
+        return NULL;
+    }
+    return result;
 }
 
 JNIEXPORT jint
