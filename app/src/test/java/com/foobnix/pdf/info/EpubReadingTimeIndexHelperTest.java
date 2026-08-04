@@ -106,6 +106,68 @@ public class EpubReadingTimeIndexHelperTest {
         assertEquals(24, position.bookWordsRemaining);
     }
 
+    @Test
+    public void visibleBookEndExcludesDuplicatedTrailingSpineContent() throws Exception {
+        File epub = temporaryFolder.newFile("duplicated-tail.epub");
+        String first = "alpha beta gamma delta epsilon zeta eta theta iota " +
+                "kappa lambda mu";
+        String last = "nu xi omicron pi rho sigma tau";
+        try (ZipOutputStream output = new ZipOutputStream(new FileOutputStream(epub))) {
+            write(output,
+                  "META-INF/container.xml",
+                  "<?xml version=\"1.0\"?>" +
+                          "<container><rootfiles><rootfile full-path=\"OPS/book.opf\"/>" +
+                          "</rootfiles></container>");
+            write(output,
+                  "OPS/book.opf",
+                  "<?xml version=\"1.0\"?>" +
+                          "<package><manifest>" +
+                          "<item id=\"first\" href=\"first.xhtml\"/>" +
+                          "<item id=\"last\" href=\"last.xhtml\"/>" +
+                          "<item id=\"duplicate-first\" href=\"duplicate-first.xhtml\"/>" +
+                          "<item id=\"duplicate-last\" href=\"duplicate-last.xhtml\"/>" +
+                          "</manifest><spine>" +
+                          "<itemref idref=\"first\"/><itemref idref=\"last\"/>" +
+                          "<itemref idref=\"duplicate-first\"/>" +
+                          "<itemref idref=\"duplicate-last\"/>" +
+                          "</spine></package>");
+            write(output, "OPS/first.xhtml", "<html><body>" + first + "</body></html>");
+            write(output, "OPS/last.xhtml", "<html><body>" + last + "</body></html>");
+            write(output,
+                  "OPS/duplicate-first.xhtml",
+                  "<html><body>" + first + "</body></html>");
+            write(output,
+                  "OPS/duplicate-last.xhtml",
+                  "<html><body>" + last + "</body></html>");
+        }
+
+        EpubReadingTimeIndex index = EpubReadingTimeIndex.load(epub);
+        List<String> currentPageWords =
+                ReadingTimeRemainingHelper.tokenizeWords("gamma delta epsilon zeta eta");
+        List<String> finalPageWords = ReadingTimeRemainingHelper.tokenizeWords(last);
+        EpubReadingTimeIndex.Position current = index.locate(currentPageWords, -1);
+        assertNotNull(current);
+        EpubReadingTimeIndex.Position visibleFinalPage = index.locateAtOrAfter(
+                finalPageWords,
+                current.sourceWord,
+                current.sourceWord);
+        int visibleEnd = index.sourceWordAfterPage(visibleFinalPage, finalPageWords);
+        EpubReadingTimeIndex.Position bounded = index.limitBookEnd(current, visibleEnd);
+
+        assertNotNull(visibleFinalPage);
+        assertNotNull(bounded);
+        assertEquals(2, current.sourceWord);
+        assertEquals(12, visibleFinalPage.sourceWord);
+        assertEquals(19, visibleEnd);
+        assertEquals(17, bounded.bookWordsRemaining);
+        assertEquals(36, current.bookWordsRemaining);
+
+        EpubReadingTimeIndex.Position atVisibleEnd = index.positionAt(visibleEnd);
+        EpubReadingTimeIndex.Position completed = index.limitBookEnd(atVisibleEnd, visibleEnd);
+        assertNotNull(completed);
+        assertEquals(0, completed.bookWordsRemaining);
+    }
+
     private static void write(ZipOutputStream output, String name, String contents)
             throws Exception {
         output.putNextEntry(new ZipEntry(name));

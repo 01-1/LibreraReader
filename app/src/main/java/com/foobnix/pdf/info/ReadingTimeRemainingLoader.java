@@ -48,6 +48,7 @@ public final class ReadingTimeRemainingLoader {
     private int cachedPageCount = -1;
     private EpubReadingTimeIndex epubIndex;
     private int lastEpubSourceWord = -1;
+    private int epubVisibleBookEndWord = -1;
     private boolean isShutdown;
 
     public ReadingTimeRemainingLoader(DocumentController controller) {
@@ -73,6 +74,7 @@ public final class ReadingTimeRemainingLoader {
             wordsByPage.clear();
             pageWordsByPage.clear();
             cachedPageCount = pageCount;
+            epubVisibleBookEndWord = -1;
         }
 
         final int safePageCount = Math.max(0, pageCount);
@@ -179,8 +181,15 @@ public final class ReadingTimeRemainingLoader {
                             callback);
             }
             if (calculateBook) {
+                int visibleBookEndWord = resolveEpubVisibleBookEnd(position, pageCount);
+                EpubReadingTimeIndex.Position visiblePosition =
+                        epubIndex.limitBookEnd(position, visibleBookEndWord);
+                if (visiblePosition == null) {
+                    postBook(requestGeneration, -1, 0, callback);
+                    return;
+                }
                 postBook(requestGeneration,
-                         position.bookWordsRemaining,
+                         visiblePosition.bookWordsRemaining,
                          wordsPerMinute,
                          callback);
             }
@@ -191,6 +200,40 @@ public final class ReadingTimeRemainingLoader {
             LOG.e(error);
             postUnavailable(requestGeneration, calculateChapter, calculateBook, callback);
         }
+    }
+
+    private int resolveEpubVisibleBookEnd(EpubReadingTimeIndex.Position currentPosition,
+                                          int pageCount) {
+        if (epubVisibleBookEndWord >= currentPosition.sourceWord) {
+            return epubVisibleBookEndWord;
+        }
+        if (pageCount <= 0) {
+            return -1;
+        }
+
+        int finalPage = pageCount - 1;
+        for (int attempt = 0; attempt < EPUB_PAGE_TEXT_ATTEMPTS; attempt++) {
+            List<String> finalPageWords = getPageWords(finalPage);
+            if (!finalPageWords.isEmpty()) {
+                EpubReadingTimeIndex.Position finalPagePosition =
+                        epubIndex.locateAtOrAfter(finalPageWords,
+                                                 currentPosition.sourceWord,
+                                                 currentPosition.sourceWord);
+                if (finalPagePosition != null) {
+                    int candidateEnd =
+                            epubIndex.sourceWordAfterPage(finalPagePosition, finalPageWords);
+                    if (candidateEnd >= currentPosition.sourceWord) {
+                        epubVisibleBookEndWord = candidateEnd;
+                        return candidateEnd;
+                    }
+                }
+            }
+            pageWordsByPage.remove(finalPage);
+            if (attempt + 1 < EPUB_PAGE_TEXT_ATTEMPTS && !waitForPageTextRetry()) {
+                return -1;
+            }
+        }
+        return -1;
     }
 
     private EpubAnchor locateEpubAnchor(int currentPage, int pageCount) {
@@ -354,5 +397,6 @@ public final class ReadingTimeRemainingLoader {
         wordsByPage.clear();
         pageWordsByPage.clear();
         epubIndex = null;
+        epubVisibleBookEndWord = -1;
     }
 }

@@ -107,14 +107,42 @@ final class EpubReadingTimeIndex {
     }
 
     Position locate(List<String> pageWords, int previousWordHint) {
+        return locateAtOrAfter(pageWords, 0, previousWordHint);
+    }
+
+    Position locateAtOrAfter(List<String> pageWords,
+                             int minimumWordIndex,
+                             int previousWordHint) {
         if (pageWords == null || pageWords.isEmpty()) {
             return null;
         }
-        int wordIndex = findBestStart(pageWords, previousWordHint);
+        int wordIndex = findBestStart(pageWords,
+                                      Math.max(0, minimumWordIndex),
+                                      previousWordHint);
         if (wordIndex < 0) {
             return null;
         }
         return positionAt(wordIndex);
+    }
+
+    int sourceWordAfterPage(Position pageStart, List<String> pageWords) {
+        if (pageStart == null || pageWords == null) {
+            return -1;
+        }
+        return Math.min(words.size(), pageStart.sourceWord + pageWords.size());
+    }
+
+    Position limitBookEnd(Position position, int exclusiveEndWord) {
+        if (position == null || exclusiveEndWord < 0) {
+            return null;
+        }
+        int endWord = Math.max(position.sourceWord,
+                               Math.min(words.size(), exclusiveEndWord));
+        int bookWordsRemaining = endWord - position.sourceWord;
+        return new Position(position.sourceWord,
+                            Math.min(position.chapterWordsRemaining,
+                                     bookWordsRemaining),
+                            bookWordsRemaining);
     }
 
     Position positionAt(int requestedWordIndex) {
@@ -135,7 +163,9 @@ final class EpubReadingTimeIndex {
                             Math.max(0, words.size() - wordIndex));
     }
 
-    private int findBestStart(List<String> pageWords, int previousWordHint) {
+    private int findBestStart(List<String> pageWords,
+                              int minimumWordIndex,
+                              int previousWordHint) {
         int sampleLength = Math.min(MATCH_WORDS, pageWords.size());
         int bestStart = -1;
         int bestScore = -1;
@@ -148,7 +178,7 @@ final class EpubReadingTimeIndex {
                     continue;
                 }
                 int candidateStart = source - sampleOffset;
-                if (candidateStart < 0 || candidateStart >= words.size()) {
+                if (candidateStart < minimumWordIndex || candidateStart >= words.size()) {
                     continue;
                 }
                 int score = score(candidateStart, pageWords);
@@ -167,10 +197,12 @@ final class EpubReadingTimeIndex {
         if (bestStart >= 0) {
             return bestStart;
         }
-        return findBestTolerantStart(pageWords, previousWordHint);
+        return findBestTolerantStart(pageWords, minimumWordIndex, previousWordHint);
     }
 
-    private int findBestTolerantStart(List<String> pageWords, int previousWordHint) {
+    private int findBestTolerantStart(List<String> pageWords,
+                                      int minimumWordIndex,
+                                      int previousWordHint) {
         int bestStart = -1;
         int bestScore = -1;
         int bestDistance = Integer.MAX_VALUE;
@@ -183,7 +215,7 @@ final class EpubReadingTimeIndex {
                     continue;
                 }
                 int candidateStart = source - targetOffset;
-                if (candidateStart < 0 || candidateStart >= words.size() ||
+                if (candidateStart < minimumWordIndex || candidateStart >= words.size() ||
                         !scoredCandidates.add(candidateStart)) {
                     continue;
                 }
